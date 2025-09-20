@@ -73,4 +73,67 @@ async function createPacienteComPessoa(pessoa = {}, paciente = {}) {
   }
 }
 
-module.exports = { createPacienteComPessoa };
+const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+
+async function getPacientePorCPF(cpf) {
+  const cpfClean = cleanCpf(cpf);
+  if (!cpfClean) throw new Error('CPF é obrigatório.');
+
+  const { rows } = await pool.query(
+    `SELECT 
+       p.nome,
+       p.cpf,
+       p.nascimento,
+       p.sexo,
+       p.telefone,
+       pa.id              AS paciente_id,
+       pa.alergias,
+       pa.comorbidades,
+       pa.prontuario,
+       pa.observacao
+     FROM pessoas p
+     INNER JOIN pacientes pa ON pa.id_pessoa = p.id
+     WHERE p.cpf = $1
+     LIMIT 1`,
+    [cpfClean]
+  );
+
+  if (rows.length === 0) return null;
+
+  return rows[0];
+}
+
+async function updatePacientePorCPF(cpf, paciente = {}) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { alergias = null, comorbidades = null, prontuario = null, observacao = null } = paciente;
+
+    const { rows } = await client.query(
+      `UPDATE pacientes pa
+       SET alergias = $1,
+           comorbidades = $2,
+           prontuario = $3,
+           observacao = $4
+       FROM pessoas p
+       WHERE pa.id_pessoa = p.id
+         AND p.cpf = $5
+       RETURNING pa.*`,
+      [alergias, comorbidades, prontuario, observacao, cpf]
+    );
+
+    await client.query('COMMIT');
+
+    if (rows.length === 0) return null;
+
+    return rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { createPacienteComPessoa, getPacientePorCPF, updatePacientePorCPF };

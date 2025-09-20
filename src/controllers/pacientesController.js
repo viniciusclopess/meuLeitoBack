@@ -1,5 +1,5 @@
 // controllers/pacienteController.js
-const { createPacienteComPessoa } = require('../services/pacientesService');
+const { createPacienteComPessoa, getPacientePorCPF, updatePacientePorCPF } = require('../services/pacientesService');
 
 async function criarPaciente(req, res) {
   try {
@@ -27,4 +27,30 @@ async function criarPaciente(req, res) {
   }
 }
 
-module.exports = { criarPaciente };
+async function getPaciente(req, res){
+  try{
+    const { cpf } = req.body;
+    const pac = await getPacientePorCPF(cpf);
+
+    if(!pac) return res.status(404).json({message: "Paciente não encontrado"});
+    return res.status(200).json({ data: pac })
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ message: 'Erro as buscar paciente.', error: err.message});
+  }
+}
+
+async function updatePaciente(req, res){
+  try{
+    const {cpf,  paciente = {}} = req.body;
+    const pac = await updatePacientePorCPF(cpf, paciente)
+
+    if(!pac) return res.status(404).json({message: "Paciente não encontrado"});
+    return res.status(200).json({ data: pac})
+  } catch(err){
+    console.error(err);
+    return res.status(400).json({ message: 'Erro ao atualizar paciente.', error: err.message})
+  }
+}
+
+module.exports = { criarPaciente, getPaciente, updatePaciente };
