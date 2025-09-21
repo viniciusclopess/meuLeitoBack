@@ -1,4 +1,3 @@
-// routes/pacienteRoutes.js
 const express = require('express');
 const { criarPaciente, getPaciente, updatePaciente } = require('../controllers/pacientesController');
 

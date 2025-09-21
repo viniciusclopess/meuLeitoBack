@@ -1,4 +1,3 @@
-// controllers/pacienteController.js
 const { createPacienteComPessoa, getPacientePorCPF, updatePacientePorCPF } = require('../services/pacientesService');
 
 async function criarPaciente(req, res) {

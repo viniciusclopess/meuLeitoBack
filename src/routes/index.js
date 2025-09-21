@@ -4,13 +4,13 @@ const router = express.Router();
 
 // sub-routers por domínio
 const pacientes = require('./pacientesRoutes');
-// const pessoas   = require('./pessoas');
-// const usuarios  = require('./usuarios');
+const medicos   = require('./medicosRoutes');
+const enfermeiras  = require('./enfermeirasRoutes');
 // const leitos    = require('./leitos');
 
 router.use('/pacientes', pacientes);
-// router.use('/pessoas',   pessoas);
-// router.use('/usuarios',  usuarios);
+router.use('/medicos',   medicos);
+router.use('/enfermeiras',  enfermeiras);
 // router.use('/leitos',    leitos);
 
 router.get('/health', (req, res) => res.json({ ok: true }));
