@@ -45,18 +45,18 @@ async function createMedicoComPessoa(pessoa = {}, medico = {}) {
     }
 
     // 3) Já é medico?
-    const jaPac = await client.query('SELECT id FROM medicos WHERE id_pessoa = $1', [pessoaId]);
-    if (jaPac.rowCount > 0) {
+    const jaExiste = await client.query('SELECT id FROM medicos WHERE id_pessoa = $1', [pessoaId]);
+    if (jaExiste.rowCount > 0) {
       await client.query('ROLLBACK');
       return {
         warning: 'Pessoa já possui cadastro de médico.',
         pessoa_id: pessoaId,
-        medico_id: jaPac.rows[0].id
+        medico_id: jaExiste.rows[0].id
       };
     }
 
     // 4) Cria medico
-    const novoPac = await client.query(
+    const novoMed = await client.query(
       `INSERT INTO medicos (id_pessoa, especialidade, status, obs)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
@@ -64,7 +64,7 @@ async function createMedicoComPessoa(pessoa = {}, medico = {}) {
     );
 
     await client.query('COMMIT');
-    return { pessoa_id: pessoaId, medico: novoPac.rows[0] };
+    return { pessoa_id: pessoaId, medico: novoMed.rows[0] };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

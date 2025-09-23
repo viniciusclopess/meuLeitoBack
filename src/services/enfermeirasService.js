@@ -45,18 +45,18 @@ async function createEnfermeiraComPessoa(pessoa = {}, enfermeira = {}) {
     }
 
     // 3) Já é enfermeira?
-    const jaPac = await client.query('SELECT id FROM enfermeiras WHERE id_pessoa = $1', [pessoaId]);
-    if (jaPac.rowCount > 0) {
+    const jaExiste = await client.query('SELECT id FROM enfermeiras WHERE id_pessoa = $1', [pessoaId]);
+    if (jaExiste.rowCount > 0) {
       await client.query('ROLLBACK');
       return {
         warning: 'Pessoa já possui cadastro de enfermeiras.',
         pessoa_id: pessoaId,
-        enfermeira_id: jaPac.rows[0].id
+        enfermeira_id: jaExiste.rows[0].id
       };
     }
 
     // 4) Cria enfermeira
-    const novoPac = await client.query(
+    const novaEnf = await client.query(
       `INSERT INTO enfermeiras (id_pessoa, setor, status, obs)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
@@ -64,7 +64,7 @@ async function createEnfermeiraComPessoa(pessoa = {}, enfermeira = {}) {
     );
 
     await client.query('COMMIT');
-    return { pessoa_id: pessoaId, enfermeira: novoPac.rows[0] };
+    return { pessoa_id: pessoaId, enfermeira: novaEnf.rows[0] };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

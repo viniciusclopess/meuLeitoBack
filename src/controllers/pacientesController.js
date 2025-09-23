@@ -35,7 +35,7 @@ async function getPaciente(req, res){
     return res.status(200).json({ data: pac })
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro as buscar paciente.', error: err.message});
+    return res.status(400).json({ message: 'Erro ao buscar paciente.', error: err.message});
   }
 }
 

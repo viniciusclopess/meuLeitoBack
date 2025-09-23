@@ -6,12 +6,12 @@ const router = express.Router();
 const pacientes = require('./pacientesRoutes');
 const medicos   = require('./medicosRoutes');
 const enfermeiras  = require('./enfermeirasRoutes');
-// const leitos    = require('./leitos');
+const leitos    = require('./leitosRoutes');
 
 router.use('/pacientes', pacientes);
 router.use('/medicos',   medicos);
 router.use('/enfermeiras',  enfermeiras);
-// router.use('/leitos',    leitos);
+router.use('/leitos',    leitos);
 
 router.get('/health', (req, res) => res.json({ ok: true }));
 

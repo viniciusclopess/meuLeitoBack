@@ -45,13 +45,13 @@ async function createPacienteComPessoa(pessoa = {}, paciente = {}) {
     }
 
     // 3) Já é paciente?
-    const jaPac = await client.query('SELECT id FROM pacientes WHERE id_pessoa = $1', [pessoaId]);
-    if (jaPac.rowCount > 0) {
+    const jaExiste = await client.query('SELECT id FROM pacientes WHERE id_pessoa = $1', [pessoaId]);
+    if (jaExiste.rowCount > 0) {
       await client.query('ROLLBACK');
       return {
         warning: 'Pessoa já possui cadastro de paciente.',
         pessoa_id: pessoaId,
-        paciente_id: jaPac.rows[0].id
+        paciente_id: jaExiste.rows[0].id
       };
     }
 

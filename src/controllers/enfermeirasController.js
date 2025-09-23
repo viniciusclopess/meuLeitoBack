@@ -35,7 +35,7 @@ async function getEnfermeira(req, res){
     return res.status(200).json({ data: med })
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro as buscar médico.', error: err.message});
+    return res.status(400).json({ message: 'Erro ao buscar enfermeira.', error: err.message});
   }
 }
 
