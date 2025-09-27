@@ -1,6 +1,6 @@
 const { createEnfermeiraComPessoa, getEnfermeiraPorCPF, updateEnfermeiraPorCPF } = require('../services/enfermeirasService');
 
-async function criarEnfermeira(req, res) {
+async function createEnfermeira(req, res) {
   try {
     const { pessoa, enfermeira } = req.body;
 
@@ -52,4 +52,4 @@ async function updateEnfermeira(req, res){
   }
 }
 
-module.exports = { criarEnfermeira, getEnfermeira, updateEnfermeira };
+module.exports = { createEnfermeira, getEnfermeira, updateEnfermeira };

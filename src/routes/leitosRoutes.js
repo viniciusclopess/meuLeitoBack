@@ -1,9 +1,9 @@
 const express = require('express');
-const { criarLeito, getLeito, updateLeito } = require('../controllers/leitosController');
+const { createLeito, getLeito, updateLeito } = require('../controllers/leitosController');
 
 const router = express.Router();
 
-router.post('/', criarLeito);
+router.post('/', createLeito);
 router.get('/', getLeito);
 router.put('/', updateLeito);
 

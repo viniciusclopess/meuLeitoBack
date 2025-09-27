@@ -1,6 +1,6 @@
 const { createMedicoComPessoa, getMedicoPorCPF, updateMedicoPorCPF } = require('../services/medicosService');
 
-async function criarMedico(req, res) {
+async function createMedico(req, res) {
   try {
     const { pessoa, medico } = req.body;
 
@@ -52,4 +52,4 @@ async function updateMedico(req, res){
   }
 }
 
-module.exports = { criarMedico, getMedico, updateMedico };
+module.exports = { createMedico, getMedico, updateMedico };

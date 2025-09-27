@@ -1,6 +1,6 @@
 const { createLeitoporCodigo, getLeitoPorCodigo, updateLeitoPorCodigo } = require('../services/leitosService');
 
-async function criarLeito(req, res) {
+async function createLeito(req, res) {
   try {
     const { leitoBody } = req.body;
 
@@ -52,4 +52,4 @@ async function updateLeito(req, res){
   }
 }
 
-module.exports = { criarLeito, getLeito, updateLeito };
+module.exports = { createLeito, getLeito, updateLeito };

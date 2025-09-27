@@ -1,6 +1,6 @@
 const { createPacienteComPessoa, getPacientePorCPF, updatePacientePorCPF } = require('../services/pacientesService');
 
-async function criarPaciente(req, res) {
+async function createPaciente(req, res) {
   try {
     const { pessoa, paciente } = req.body;
 
@@ -52,4 +52,4 @@ async function updatePaciente(req, res){
   }
 }
 
-module.exports = { criarPaciente, getPaciente, updatePaciente };
+module.exports = { createPaciente, getPaciente, updatePaciente };
