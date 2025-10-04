@@ -70,7 +70,7 @@ async function createUsuarioPorCPF(pessoa = {}, usuario = {}) {
     const senhaHash = await bcrypt.hash(usuario.senha, saltRounds);
 
     // 4) Inserir usuário
-    const rInsert = await client.query(
+    const rUsuario = await client.query(
       `INSERT INTO usuarios (id_pessoa, login, senha, tipo_usuario, ativo)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
@@ -84,7 +84,7 @@ async function createUsuarioPorCPF(pessoa = {}, usuario = {}) {
     );
 
     await client.query('COMMIT');
-    return rInsert.rows[0];
+    return rUsuario.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

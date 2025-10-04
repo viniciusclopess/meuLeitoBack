@@ -45,7 +45,7 @@ async function createPessoaPorCPF(pessoa = {}) {
     }
 
     await client.query('COMMIT');
-    return rInsert.rows[0];
+    return pessoaDados;
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

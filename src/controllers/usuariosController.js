@@ -14,7 +14,7 @@ async function createUsuario(req, res) {
     }
 
     return res.status(201).json({
-      message: 'Usuário criada com sucesso.',
+      message: 'Usuário criado com sucesso.',
       data: resultado
     });
   } catch (err) {

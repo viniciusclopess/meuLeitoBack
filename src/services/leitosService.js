@@ -28,14 +28,14 @@ async function createLeitoporCodigo(leito = {}) {
 
     // 2) Cria leito
     const inserido = await client.query(
-      `INSERT INTO leitos (codigo_leito, andar, sala, setor, descricao)
+      `INSERT INTO leitos (codigo_leito, id_setor, andar, sala, descricao)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
         codigo,
+        leito.id_setor,
         leito.andar ?? null,
         leito.sala ?? null,
-        leito.setor ?? null,
         leito.descricao ?? null,
       ]
     );
@@ -81,19 +81,19 @@ async function updateLeitoPorCodigo(codigo_leito, dados = {}) {
     const {
       andar = null,
       sala = null,
-      setor = null,
+      id_setor = null,
       descricao = null,
     } = dados;
 
     const { rows } = await client.query(
       `UPDATE leitos
-         SET andar = $1,
-             sala = $2,
-             setor = $3,
-             descricao = $4
+         SET andar     =  COALESCE($1, andar)
+             sala      =  COALESCE($2, sala)
+             id_setor  =  COALESCE($3, id_setor)
+             descricao =  COALESVE($4, descricao)
        WHERE codigo_leito = $5
        RETURNING *`,
-      [andar, sala, setor, descricao, codigo]
+      [andar, sala, id_setor, descricao, codigo]
     );
 
     await client.query('COMMIT');
