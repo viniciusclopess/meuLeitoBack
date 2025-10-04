@@ -134,8 +134,8 @@ async function updateEnfermeiraPorCPF(cpf, enfermeira = {}) {
     await client.query('BEGIN');
     
     // 1) Verifica se há CPF na requisição
-    if (!cpf) throw new Error('Login obrigatório.');
-    const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+    const cpfClean = cleanCpf(cpf);
+    if (!cpfClean) throw new Error('CPF é obrigatório.');
 
     // 2) Faz o update dos dados da requisição
     const { rows } = await client.query(
@@ -148,7 +148,7 @@ async function updateEnfermeiraPorCPF(cpf, enfermeira = {}) {
       WHERE enf.id_pessoa = p.id
         AND p.cpf = $1
       RETURNING enf.*`,
-      [cleanCpf, enfermeira.id_setor, enfermeira.status, enfermeira.obs]
+      [cpfClean, enfermeira.id_setor, enfermeira.status, enfermeira.obs]
     );
 
     await client.query('COMMIT');

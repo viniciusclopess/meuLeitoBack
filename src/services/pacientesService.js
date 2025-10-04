@@ -11,60 +11,75 @@ async function createPacienteComPessoa(pessoa = {}, paciente = {}) {
   try {
     await client.query('BEGIN');
 
-    if (!pessoa?.nome) {
-      throw new Error('Erro aqui.');
+    if (!pessoa?.cpf) {
+      throw new Error('Campos obrigatórios!');
     }
 
-    // 1) Tenta achar pessoa por CPF (se vier CPF)
-    let pessoaId = null;
-    if (pessoa.cpf) {
-      const r = await client.query('SELECT id FROM pessoas WHERE cpf = $1', [pessoa.cpf]);
-      if (r.rowCount > 0) pessoaId = r.rows[0].id;
+    // Ajeitar CPF
+    const cpfLimpo = String(pessoa.cpf).replace(/\D/g, '');
+
+    // 1) Buscar pessoa por CPF
+    const rPessoa = await client.query(
+      'SELECT id FROM pessoas WHERE cpf = $1',
+      [cpfLimpo]
+    );
+
+    let pessoaId;
+    // Não achou = Cria
+    if (rPessoa.rowCount === 0) {
+      const r = await client.query(
+        `INSERT INTO pessoas (cpf, nome, nascimento, telefone, sexo, estado_civil, naturalidade, nacionalidade, uf, endereco, email )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id`,
+        [
+          cpfLimpo,
+          pessoa.nome,
+          pessoa.nascimento,
+          pessoa.telefone ?? null,
+          pessoa.sexo ?? null,
+          pessoa.estado_civil ?? null,
+          pessoa.naturalidade ?? null, 
+          pessoa.nacionalidade ?? null, 
+          pessoa.uf ?? null,
+          pessoa.endereco ?? null,
+          pessoa.email ?? null
+        ]
+      );
+      pessoaId = r.rows[0].id;
+    } else {
+      pessoaId = rPessoa.rows[0].id;
     }
 
-    // 2) Se não achou, cria pessoa (com upsert por cpf, se tiver)
-    if (!pessoaId) {
-      if (pessoa.cpf) {
-        const r = await client.query(
-          `INSERT INTO pessoas (nome, cpf, nascimento, sexo, telefone)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (cpf) DO UPDATE SET nome = EXCLUDED.nome
-           RETURNING id`,
-          [pessoa.nome, pessoa.cpf, pessoa.nascimento, pessoa.sexo, pessoa.telefone ?? null]
-        );
-        pessoaId = r.rows[0].id;
-      } else {
-        const r = await client.query(
-          `INSERT INTO pessoas (nome, nascimento, telefone)
-           VALUES ($1, $2, $3)
-           RETURNING id`,
-          [pessoa.nome, pessoa.nascimento, pessoa.telefone ?? null]
-        );
-        pessoaId = r.rows[0].id;
-      }
-    }
-
-    // 3) Já é paciente?
-    const jaExiste = await client.query('SELECT id FROM pacientes WHERE id_pessoa = $1', [pessoaId]);
+    // 2) Já é paciente?
+    const jaExiste = await client.query(
+      'SELECT id FROM pacientes WHERE id_pessoa = $1',
+      [pessoaId]
+    );
     if (jaExiste.rowCount > 0) {
       await client.query('ROLLBACK');
       return {
         warning: 'Pessoa já possui cadastro de paciente.',
         pessoa_id: pessoaId,
-        paciente_id: jaExiste.rows[0].id
+        pac_id: jaExiste.rows[0].id
       };
-    }
+    }    
 
-    // 4) Cria paciente
-    const novoPac = await client.query(
+    // 4) Inserir paciente
+    const rPaciente = await client.query(
       `INSERT INTO pacientes (id_pessoa, alergias, comorbidades, prontuario, observacao)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [pessoaId, paciente.alergias ?? null, paciente.comorbidades  ?? null, paciente.prontuario ?? null, paciente.observacao ?? null]
+      [
+        pessoaId,
+        paciente.alergias ?? null,
+        paciente.comorbidades ?? null,
+        paciente.prontuario ?? null,
+        paciente.observacao ?? null
+      ]
     );
 
     await client.query('COMMIT');
-    return { pessoa_id: pessoaId, paciente: novoPac.rows[0] };
+    return rPaciente.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -107,26 +122,28 @@ async function updatePacientePorCPF(cpf, paciente = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    
+    // 1) Verifica se há CPF na requisição
+    if (!cpf) throw new Error('Login obrigatório.');
+    const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
 
-    const { alergias = null, comorbidades = null, prontuario = null, observacao = null } = paciente;
-
+    // 2) Faz o update dos dados da requisição
     const { rows } = await client.query(
-      `UPDATE pacientes pa
-       SET alergias = $1,
-           comorbidades = $2,
-           prontuario = $3,
-           observacao = $4
-       FROM pessoas p
-       WHERE pa.id_pessoa = p.id
-         AND p.cpf = $5
-       RETURNING pa.*`,
-      [alergias, comorbidades, prontuario, observacao, cpf]
+      `UPDATE pacientes pac
+      SET 
+          alergias        =  COALESCE($2, alergias)
+          comorbidades    =  COALESCE($3, comorbidades),
+          prontuario      =  COALESCE($4, prontuario),
+          observacao      =  COALESCE($4, observacao),
+      FROM pessoas p
+      WHERE pac.id_pessoa = p.id
+        AND p.cpf = $1
+      RETURNING pac.*`,
+      [cleanCpf, paciente.alergias, paciente.comorbidades, paciente.prontuario, paciente.observacao]
     );
 
     await client.query('COMMIT');
-
     if (rows.length === 0) return null;
-
     return rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
