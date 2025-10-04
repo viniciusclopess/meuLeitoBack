@@ -94,12 +94,24 @@ async function createUsuarioPorCPF(pessoa = {}, usuario = {}) {
 }
 
 // Get de 1 usuário
-async function getUsuarioPorCPF(login) {
-  if (!login) throw new Error('login é obrigatório.');
+async function getUsuarioPorLogin(login) {
+  if (!login) throw new Error('Login é obrigatório.');
 
   const { rows } = await pool.query(
-    `SELECT * FROM usuarios
-     WHERE login = $1
+    `SELECT 
+       p.nome,
+       p.cpf,
+       p.nascimento,
+       p.sexo,
+       p.telefone,
+       usu.id              AS id_usuario,
+       usu.login,
+       usu.tipo_usuario,
+       usu.ativo,
+       usu.ultimo_login
+     FROM pessoas p
+     INNER JOIN usuarios usu ON usu.id_pessoa = p.id
+     WHERE usu.login = $1
      LIMIT 1`,
     [login]
   );
@@ -108,7 +120,7 @@ async function getUsuarioPorCPF(login) {
   return rows[0];
 }
 
-async function updateUsuarioPorCPF(usuario = {}) {
+async function updateUsuarioPorLogin(usuario = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -148,6 +160,6 @@ async function updateUsuarioPorCPF(usuario = {}) {
 
 module.exports = {
   createUsuarioPorCPF,
-  getUsuarioPorCPF,
-  updateUsuarioPorCPF
+  getUsuarioPorLogin,
+  updateUsuarioPorLogin
 };

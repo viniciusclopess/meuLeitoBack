@@ -1,4 +1,4 @@
-const { createUsuarioPorCPF, getUsuarioPorCPF, updateUsuarioPorCPF } = require('../services/usuariosService');
+const { createUsuarioPorCPF, getUsuarioPorLogin, updateUsuarioPorLogin } = require('../services/usuariosService');
 
 async function createUsuario(req, res) {
   try {
@@ -29,7 +29,7 @@ async function createUsuario(req, res) {
 async function getUsuario(req, res){
   try{
     const { login } = req.body;
-    const user = await getUsuarioPorCPF(login);
+    const user = await getUsuarioPorLogin(login);
 
     if(!user) return res.status(404).json({message: "Usuário não encontrado"});
     return res.status(200).json({ data: user })
@@ -42,7 +42,7 @@ async function getUsuario(req, res){
 async function updateUsuario(req, res){
   try{
     const { usuario = {}} = req.body;
-    const user = await updateUsuarioPorCPF(usuario)
+    const user = await updateUsuarioPorLogin(usuario)
 
     if(!user) return res.status(404).json({message: "Usuário não encontrado"});
     return res.status(200).json({ data: user})
