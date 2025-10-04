@@ -144,7 +144,11 @@ async function updateUsuarioPorLogin(usuario = {}) {
             ativo         =  COALESCE($3, ativo)
         WHERE login = $4
         RETURNING *`,
-      [senhaHash, usuario.tipo_usuario, usuario.ativo, usuario.login]
+      [
+        senhaHash, 
+        usuario.tipo_usuario, 
+        usuario.ativo, 
+        usuario.login]
     );
 
     await client.query('COMMIT');

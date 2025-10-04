@@ -71,7 +71,7 @@ async function updateLeitoPorCodigo(codigo_leito, leito = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    if (!codigo_leito) throw new Error('codigo_leito é obrigatório.');
+    if (!codigo_leito) throw new Error('Código do leito é obrigatório.');
     
     const novoCodigo = leito.novo_codigo_leito ?? null;
 

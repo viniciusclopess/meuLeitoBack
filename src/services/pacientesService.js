@@ -124,7 +124,7 @@ async function updatePacientePorCPF(cpf, paciente = {}) {
     await client.query('BEGIN');
     
     // 1) Verifica se há CPF na requisição
-    if (!cpf) throw new Error('Login obrigatório.');
+    if (!cpf) throw new Error('CPF obrigatório.');
     const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
 
     // 2) Faz o update dos dados da requisição
