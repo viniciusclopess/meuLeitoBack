@@ -1,10 +1,10 @@
-const { createPacienteComPessoa, getPacientePorCPF, updatePacientePorCPF } = require('../services/pacientesService');
+const { createPaciente, selectPaciente, updatePaciente } = require('../services/pacientesService');
 
-async function createPaciente(req, res) {
+async function postPaciente(req, res) {
   try {
     const { pessoa, paciente } = req.body;
 
-    const resultado = await createPacienteComPessoa(pessoa, paciente);
+    const resultado = await createPaciente(pessoa, paciente);
 
     if (resultado.warning) {
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createPaciente(req, res) {
 async function getPaciente(req, res){
   try{
     const { cpf } = req.body;
-    const pac = await getPacientePorCPF(cpf);
+    const pac = await selectPaciente(cpf);
 
     if(!pac) return res.status(404).json({message: "Paciente não encontrado"});
     return res.status(200).json({ data: pac })
@@ -39,10 +39,10 @@ async function getPaciente(req, res){
   }
 }
 
-async function updatePaciente(req, res){
+async function putPaciente(req, res){
   try{
     const {cpf,  paciente = {}} = req.body;
-    const pac = await updatePacientePorCPF(cpf, paciente)
+    const pac = await updatePaciente(cpf, paciente)
 
     if(!pac) return res.status(404).json({message: "Paciente não encontrado"});
     return res.status(200).json({ data: pac})
@@ -52,4 +52,4 @@ async function updatePaciente(req, res){
   }
 }
 
-module.exports = { createPaciente, getPaciente, updatePaciente };
+module.exports = { postPaciente, getPaciente, putPaciente };

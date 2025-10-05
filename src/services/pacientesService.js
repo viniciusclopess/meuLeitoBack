@@ -6,7 +6,7 @@ const { pool } = require('../config/db');
  *  2) Se não existir pessoa, cria nova.
  *  3) Se já for paciente (pessoa_id já em pacientes), retorna aviso.
  */
-async function createPacienteComPessoa(pessoa = {}, paciente = {}) {
+async function createPaciente(pessoa = {}, paciente = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -90,7 +90,7 @@ async function createPacienteComPessoa(pessoa = {}, paciente = {}) {
 
 const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
 
-async function getPacientePorCPF(cpf) {
+async function selectPaciente(cpf) {
   const cpfClean = cleanCpf(cpf);
   if (!cpfClean) throw new Error('CPF é obrigatório.');
 
@@ -118,7 +118,7 @@ async function getPacientePorCPF(cpf) {
   return rows[0];
 }
 
-async function updatePacientePorCPF(cpf, paciente = {}) {
+async function updatePaciente(cpf, paciente = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -153,4 +153,4 @@ async function updatePacientePorCPF(cpf, paciente = {}) {
   }
 }
 
-module.exports = { createPacienteComPessoa, getPacientePorCPF, updatePacientePorCPF };
+module.exports = { createPaciente, selectPaciente, updatePaciente };

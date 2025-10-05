@@ -1,10 +1,10 @@
-const { createPessoaPorCPF, getPessoaPorCPF, updatePessoaPorCPF } = require('../services/pessoasService');
+const { createPessoa, selectPessoa, updatePessoa } = require('../services/pessoasService');
 
-async function createPessoa(req, res) {
+async function postPessoa(req, res) {
   try {
     const { pessoa, usuario } = req.body;
 
-    const resultado = await createPessoaPorCPF(pessoa, usuario);
+    const resultado = await createPessoa(pessoa, usuario);
 
     if (resultado.warning) { 
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createPessoa(req, res) {
 async function getPessoa(req, res){
   try{
     const { login } = req.body;
-    const user = await getPessoaPorCPF(login);
+    const user = await selectPessoa(login);
 
     if(!user) return res.status(404).json({message: "Pessoa não encontrada."});
     return res.status(200).json({ data: user })
@@ -39,10 +39,10 @@ async function getPessoa(req, res){
   }
 }
 
-async function updatePessoa(req, res){
+async function putPessoa(req, res){
   try{
     const { usuario = {}} = req.body;
-    const user = await updatePessoaPorCPF(usuario)
+    const user = await updatePessoa(usuario)
 
     if(!user) return res.status(404).json({message: "Pessoa não encontrada."});
     return res.status(200).json({ data: user})
@@ -52,4 +52,4 @@ async function updatePessoa(req, res){
   }
 }
 
-module.exports = { createPessoa, getPessoa, updatePessoa };
+module.exports = { postPessoa, getPessoa, putPessoa };

@@ -2,7 +2,7 @@
 const { pool } = require('../config/db');
 const bcrypt = require('bcrypt');
 
-async function createUsuarioPorCPF(pessoa = {}, usuario = {}) {
+async function createUsuario(pessoa = {}, usuario = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -94,7 +94,7 @@ async function createUsuarioPorCPF(pessoa = {}, usuario = {}) {
 }
 
 // Get de 1 usuário
-async function getUsuarioPorLogin(login) {
+async function selectUsuario(login) {
   if (!login) throw new Error('Login é obrigatório.');
 
   const { rows } = await pool.query(
@@ -120,7 +120,7 @@ async function getUsuarioPorLogin(login) {
   return rows[0];
 }
 
-async function updateUsuarioPorLogin(usuario = {}) {
+async function updateUsuario(usuario = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -162,8 +162,4 @@ async function updateUsuarioPorLogin(usuario = {}) {
   }
 }
 
-module.exports = {
-  createUsuarioPorCPF,
-  getUsuarioPorLogin,
-  updateUsuarioPorLogin
-};
+module.exports = { createUsuario, selectUsuario, updateUsuario };

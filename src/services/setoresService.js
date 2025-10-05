@@ -1,7 +1,7 @@
 // src/services/leitosService.js
 const { pool } = require('../config/db');
 
-async function createSetorPorCodigo(setor = {}) {
+async function createSetor(setor = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -47,7 +47,7 @@ async function createSetorPorCodigo(setor = {}) {
 }
 
 // Get de 1 setor
-async function getSetorPorCodigo(codigo_setor) {
+async function selectSetor(codigo_setor) {
   if (!codigo_setor) throw new Error('Código do setor é obrigatório.');
 
   const { rows } = await pool.query(
@@ -61,7 +61,7 @@ async function getSetorPorCodigo(codigo_setor) {
   return rows[0];
 }
 
-async function updateSetorPorCodigo(codigo_setor, setor = {}) {
+async function updateSetor(codigo_setor, setor = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -98,8 +98,4 @@ async function updateSetorPorCodigo(codigo_setor, setor = {}) {
 }
 
 
-module.exports = {
-  createSetorPorCodigo,
-  getSetorPorCodigo,
-  updateSetorPorCodigo
-};
+module.exports = { createSetor, selectSetor, updateSetor };

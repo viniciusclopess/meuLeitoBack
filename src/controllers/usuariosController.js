@@ -1,10 +1,10 @@
-const { createUsuarioPorCPF, getUsuarioPorLogin, updateUsuarioPorLogin } = require('../services/usuariosService');
+const { createUsuario, selectUsuario, updateUsuario } = require('../services/usuariosService');
 
-async function createUsuario(req, res) {
+async function postUsuario(req, res) {
   try {
     const { pessoa, usuario } = req.body;
 
-    const resultado = await createUsuarioPorCPF(pessoa, usuario);
+    const resultado = await createUsuario(pessoa, usuario);
 
     if (resultado.warning) { 
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createUsuario(req, res) {
 async function getUsuario(req, res){
   try{
     const { login } = req.body;
-    const user = await getUsuarioPorLogin(login);
+    const user = await selectUsuario(login);
 
     if(!user) return res.status(404).json({message: "Usuário não encontrado"});
     return res.status(200).json({ data: user })
@@ -39,10 +39,10 @@ async function getUsuario(req, res){
   }
 }
 
-async function updateUsuario(req, res){
+async function putUsuario(req, res){
   try{
     const { usuario = {}} = req.body;
-    const user = await updateUsuarioPorLogin(usuario)
+    const user = await updateUsuario(usuario)
 
     if(!user) return res.status(404).json({message: "Usuário não encontrado"});
     return res.status(200).json({ data: user})
@@ -52,4 +52,4 @@ async function updateUsuario(req, res){
   }
 }
 
-module.exports = { createUsuario, getUsuario, updateUsuario };
+module.exports = { postUsuario, getUsuario, putUsuario };

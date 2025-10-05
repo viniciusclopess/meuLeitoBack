@@ -1,10 +1,10 @@
-const { createSetorPorCodigo, getSetorPorCodigo, updateSetorPorCodigo } = require('../services/setoresService');
+const { createSetor, selectSetor, updateSetor } = require('../services/setoresService');
 
-async function createSetor(req, res) {
+async function postSetor(req, res) {
   try {
     const { setor } = req.body;
 
-    const resultado = await createSetorPorCodigo(setor);
+    const resultado = await createSetor(setor);
 
     if (resultado.warning) { 
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createSetor(req, res) {
 async function getSetor(req, res){
   try{
     const { codigo_setor } = req.body;
-    const setor = await getSetorPorCodigo(codigo_setor);
+    const setor = await selectSetor(codigo_setor);
 
     if(!setor) return res.status(404).json({message: "Setor não encontrado"});
     return res.status(200).json({ data: setor })
@@ -39,10 +39,10 @@ async function getSetor(req, res){
   }
 }
 
-async function updateSetor(req, res){
+async function putSetor(req, res){
   try{
     const { codigo_setor, setor = {}} = req.body;
-    const setorBody = await updateSetorPorCodigo(codigo_setor, setor)
+    const setorBody = await updateSetor(codigo_setor, setor)
 
     if(!setorBody) return res.status(404).json({message: "Setor não encontrado"});
     return res.status(200).json({ data: setorBody})
@@ -52,4 +52,4 @@ async function updateSetor(req, res){
   }
 }
 
-module.exports = { createSetor, getSetor, updateSetor };
+module.exports = { postSetor, getSetor, putSetor };

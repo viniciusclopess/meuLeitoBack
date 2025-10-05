@@ -1,7 +1,7 @@
 // src/services/leitosService.js
 const { pool } = require('../config/db');
 
-async function createPessoaPorCPF(pessoa = {}) {
+async function createPessoa(pessoa = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -55,7 +55,7 @@ async function createPessoaPorCPF(pessoa = {}) {
 }
 
 // Get de 1 usuário
-async function getPessoaPorCPF(cpf) {
+async function selectPessoa(cpf) {
   if (!cpf) throw new Error('CPF é obrigatório.');
 
   const { rows } = await pool.query(
@@ -69,7 +69,7 @@ async function getPessoaPorCPF(cpf) {
   return rows[0];
 }
 
-async function updatePessoaPorCPF(pessoa = {}) {
+async function updatePessoa(pessoa = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -109,8 +109,4 @@ async function updatePessoaPorCPF(pessoa = {}) {
   }
 }
 
-module.exports = {
-  createPessoaPorCPF,
-  getPessoaPorCPF,
-  updatePessoaPorCPF
-};
+module.exports = { createPessoa, selectPessoa, updatePessoa };

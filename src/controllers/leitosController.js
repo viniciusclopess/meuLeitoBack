@@ -1,10 +1,10 @@
-const { createLeitoporCodigo, getLeitoPorCodigo, updateLeitoPorCodigo } = require('../services/leitosService');
+const { createLeito, selectLeito, updateLeito } = require('../services/leitosService');
 
-async function createLeito(req, res) {
+async function postLeito(req, res) {
   try {
     const { leitoBody } = req.body;
 
-    const resultado = await createLeitoporCodigo(leitoBody);
+    const resultado = await createLeito(leitoBody);
 
     if (resultado.warning) {
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createLeito(req, res) {
 async function getLeito(req, res){
   try{
     const { codigo_leito } = req.body;
-    const leito = await getLeitoPorCodigo(codigo_leito);
+    const leito = await selectLeito(codigo_leito);
 
     if(!leito) return res.status(404).json({message: "Leito não encontrado"});
     return res.status(200).json({ data: leito })
@@ -39,10 +39,10 @@ async function getLeito(req, res){
   }
 }
 
-async function updateLeito(req, res){
+async function putLeito(req, res){
   try{
     const {codigo_leito, leitoBody = {}} = req.body;
-    const leito = await updateLeitoPorCodigo(codigo_leito, leitoBody)
+    const leito = await updateLeito(codigo_leito, leitoBody)
 
     if(!leito) return res.status(404).json({message: "Leito não encontrado"});
     return res.status(200).json({ data: leito})
@@ -52,4 +52,4 @@ async function updateLeito(req, res){
   }
 }
 
-module.exports = { createLeito, getLeito, updateLeito };
+module.exports = { postLeito, getLeito, putLeito };

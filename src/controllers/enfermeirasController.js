@@ -1,10 +1,10 @@
-const { createEnfermeiraComPessoa, getEnfermeiraPorCPF, updateEnfermeiraPorCPF } = require('../services/enfermeirasService');
+const { createEnfermeira, selectEnfermeira, updateEnfermeira } = require('../services/enfermeirasService');
 
-async function createEnfermeira(req, res) {
+async function postEnfermeira(req, res) {
   try {
     const { pessoa, enfermeira } = req.body;
 
-    const resultado = await createEnfermeiraComPessoa(pessoa, enfermeira);
+    const resultado = await createEnfermeira(pessoa, enfermeira);
 
     if (resultado.warning) {
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createEnfermeira(req, res) {
 async function getEnfermeira(req, res){
   try{
     const { cpf } = req.body;
-    const med = await getEnfermeiraPorCPF(cpf);
+    const med = await selectEnfermeira(cpf);
 
     if(!med) return res.status(404).json({message: "Enfermeira não encontrada"});
     return res.status(200).json({ data: med })
@@ -39,10 +39,10 @@ async function getEnfermeira(req, res){
   }
 }
 
-async function updateEnfermeira(req, res){
+async function putEnfermeira(req, res){
   try{
     const {cpf,  enfermeira = {}} = req.body;
-    const med = await updateEnfermeiraPorCPF(cpf, enfermeira)
+    const med = await updateEnfermeira(cpf, enfermeira)
 
     if(!med) return res.status(404).json({message: "Enfermeira não encontrada"});
     return res.status(200).json({ data: med})
@@ -52,4 +52,4 @@ async function updateEnfermeira(req, res){
   }
 }
 
-module.exports = { createEnfermeira, getEnfermeira, updateEnfermeira };
+module.exports = { postEnfermeira, getEnfermeira, putEnfermeira };

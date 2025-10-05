@@ -1,10 +1,10 @@
-const { createMedicoComPessoa, getMedicoPorCPF, updateMedicoPorCPF } = require('../services/medicosService');
+const { createMedico, selectMedico, updateMedico } = require('../services/medicosService');
 
-async function createMedico(req, res) {
+async function postMedico(req, res) {
   try {
     const { pessoa, medico } = req.body;
 
-    const resultado = await createMedicoComPessoa(pessoa, medico);
+    const resultado = await createMedico(pessoa, medico);
 
     if (resultado.warning) {
       return res.status(200).json({
@@ -29,7 +29,7 @@ async function createMedico(req, res) {
 async function getMedico(req, res){
   try{
     const { cpf } = req.body;
-    const med = await getMedicoPorCPF(cpf);
+    const med = await selectMedico(cpf);
 
     if(!med) return res.status(404).json({message: "Médico não encontrado"});
     return res.status(200).json({ data: med })
@@ -39,10 +39,10 @@ async function getMedico(req, res){
   }
 }
 
-async function updateMedico(req, res){
+async function putMedico(req, res){
   try{
     const {cpf,  medico = {}} = req.body;
-    const med = await updateMedicoPorCPF(cpf, medico)
+    const med = await updateMedico(cpf, medico)
 
     if(!med) return res.status(404).json({message: "Médico não encontrado"});
     return res.status(200).json({ data: med})
@@ -52,4 +52,4 @@ async function updateMedico(req, res){
   }
 }
 
-module.exports = { createMedico, getMedico, updateMedico };
+module.exports = { postMedico, getMedico, putMedico };

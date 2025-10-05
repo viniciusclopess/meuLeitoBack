@@ -1,7 +1,7 @@
 // src/services/leitosService.js
 const { pool } = require('../config/db');
 
-async function createLeitoporCodigo(leito = {}) {
+async function createLeito(leito = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -53,7 +53,7 @@ async function createLeitoporCodigo(leito = {}) {
 /**
  * Lê 1 leito pelo código
  */
-async function getLeitoPorCodigo(codigo_leito) {
+async function selectLeito(codigo_leito) {
   if (!codigo_leito) throw new Error('codigo_leito é obrigatório.');
 
   const { rows } = await pool.query(
@@ -67,7 +67,7 @@ async function getLeitoPorCodigo(codigo_leito) {
   return rows[0];
 }
 
-async function updateLeitoPorCodigo(codigo_leito, leito = {}) {
+async function updateLeito(codigo_leito, leito = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -106,7 +106,7 @@ async function updateLeitoPorCodigo(codigo_leito, leito = {}) {
 }
 
 module.exports = {
-  createLeitoporCodigo,
-  getLeitoPorCodigo,
-  updateLeitoPorCodigo
+  createLeito,
+  selectLeito,
+  updateLeito
 };
