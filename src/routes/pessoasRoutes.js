@@ -1,10 +1,10 @@
 const express = require('express');
-const { createPessoa, getPessoa, updatePessoa } = require('../controllers/pessoasController');
+const { postPessoa, getPessoa, putPessoa } = require('../controllers/pessoasController');
 
 const router = express.Router();
 
-router.post('/', createPessoa);
+router.post('/', postPessoa);
 router.get('/', getPessoa);
-router.put('/', updatePessoa);
+router.put('/', putPessoa);
 
 module.exports = router;

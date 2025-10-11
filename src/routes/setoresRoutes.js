@@ -1,10 +1,10 @@
 const express = require('express');
-const { createSetor, getSetor, updateSetor } = require('../controllers/setoresController');
+const { postSetor, getSetor, putSetor } = require('../controllers/setoresController');
 
 const router = express.Router();
 
-router.post('/', createSetor);
+router.post('/', postSetor);
 router.get('/', getSetor);
-router.put('/', updateSetor);
+router.put('/', putSetor);
 
 module.exports = router;

@@ -1,10 +1,10 @@
 const express = require('express');
-const { createEnfermeira, getEnfermeira, updateEnfermeira } = require('../controllers/enfermeirasController');
+const { postEnfermeira, getEnfermeira, putEnfermeira } = require('../controllers/enfermeirasController');
 
 const router = express.Router();
 
-router.post('/', createEnfermeira);
+router.post('/', postEnfermeira);
 router.get('/', getEnfermeira);
-router.put('/', updateEnfermeira);
+router.put('/', putEnfermeira);
 
 module.exports = router;
