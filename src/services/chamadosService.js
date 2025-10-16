@@ -1,6 +1,6 @@
 const { pool } = require('../config/db');
 
-async function createChamado(chamado = {}){
+async function insertChamado(chamado = {}){
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -35,12 +35,12 @@ async function createChamado(chamado = {}){
 /**
  * Lista chamados por setor e status (ex.: pendente)
  */
-async function listarPorSetorEStatus(idSetor, status = 'pendente') {
+async function listarPorSetorEStatus(id_setor, status) {
   const { rows } = await pool.query(
     `SELECT * FROM chamados
       WHERE id_setor = $1 AND status = $2
       ORDER BY criado_em ASC`,
-    [idSetor, status]
+    [id_setor, status]
   );
   return rows;
 }
@@ -81,5 +81,4 @@ async function finalizarChamado(id_chamado, id_enfermeira) {
   return rowCount ? rows[0] : null;
 }
 
-
-module.exports = { createChamado, listarPorSetorEStatus, aceitarChamado, finalizarChamado }
+module.exports = { insertChamado, listarPorSetorEStatus, aceitarChamado, finalizarChamado }

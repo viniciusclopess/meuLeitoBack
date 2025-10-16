@@ -10,6 +10,7 @@ const leitos        = require('./leitosRoutes');
 const usuarios      = require('./usuariosRoutes');
 const pessoas       = require('./pessoasRoutes')
 const setores       = require('./setoresRoutes')
+const chamados      = require('./chamadosRoutes')
 
 router.use('/pacientes',    pacientes);
 router.use('/medicos',      medicos);
@@ -18,6 +19,7 @@ router.use('/leitos',       leitos);
 router.use('/usuarios',     usuarios);
 router.use('/pessoas',      pessoas);
 router.use('/setores',      setores);
+router.use('/chamados',      chamados);
 
 router.get('/health', (req, res) => res.json({ ok: true }));
 
