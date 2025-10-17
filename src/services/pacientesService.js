@@ -134,7 +134,7 @@ async function updatePaciente(cpf, paciente = {}) {
           alergias        =  COALESCE($2, alergias)
           comorbidades    =  COALESCE($3, comorbidades),
           prontuario      =  COALESCE($4, prontuario),
-          observacao      =  COALESCE($4, observacao),
+          observacao      =  COALESCE($5, observacao),
       FROM pessoas p
       WHERE pac.id_pessoa = p.id
         AND p.cpf = $1

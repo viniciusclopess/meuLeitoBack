@@ -28,8 +28,13 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3500;
+app.get('/', (req, res) => {
+  res.send('API do backend está rodand! Use /api/');
+});
+
+
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}/api/`);
 });
 
 // exporta o io pra usar em outros arquivos (ex: quando criar chamado)

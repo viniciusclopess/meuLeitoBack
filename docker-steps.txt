@@ -1,0 +1,28 @@
+// subir compose
+docker-compose up
+
+// parar compose
+docker-compose up
+
+// entrar no container
+docker-compose exec app bash
+
+// reconstruir imagem (mudou DockerFile)
+docker-compose up -d --build
+
+// instalar nova dependência (mudou package.json)
+docker-compose exec app npm install
+docker-compose restart app
+
+// Regras
+só código → volume já reflete → nodemon recarrega.
+.env / compose → reinicie containers (down/up -d).
+Dockerfile → up --build (rebuild + recriar).
+dependências → exec app npm install e restart.
+
+// Se algo não mudou
+- logs: docker-compose logs -f app
+- volume: docker-compose exec app bash e ls -la /app/src (ver se o arquivo mudou lá dentro)
+- activar legacy watch (se necessário):
+-- script: "dev": "nodemon --legacy-watch src/server.js" 
+-- ou nodemon.json com "legacyWatch": true
