@@ -1,5 +1,5 @@
 // src/services/leitosService.js
-const { pool } = require('../config/db');
+const { pool } = require('../db/pool');
 
 async function createLeito(leito = {}) {
   const client = await pool.connect();
@@ -10,12 +10,12 @@ async function createLeito(leito = {}) {
       throw new Error('codigo_leito é obrigatório.');
     }
 
-    const codigo = cleanCodigo(leito.codigo_leito);
+    const codigoLeito = cleanCodigo(leito.codigo_leito);
 
     // 1) Tenta achar leito por código
     let jaExiste = await client.query(
       'SELECT * FROM leitos WHERE codigo_leito = $1 LIMIT 1',
-      [codigo]
+      [codigoLeito]
     );
 
     if (jaExiste.rowCount > 0) {
@@ -28,14 +28,14 @@ async function createLeito(leito = {}) {
 
     // 2) Cria leito
     const inserido = await client.query(
-      `INSERT INTO leitos (codigo_leito, id_setor, andar, sala, descricao)
+      `INSERT INTO leitos (codigo_leito, id_setor, id_paciente, status, descricao)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
-        codigo,
+        codigoLeito,
         leito.id_setor,
-        leito.andar ?? null,
-        leito.sala ?? null,
+        leito.id_paciente ?? null,
+        leito.status ?? 'livre',
         leito.descricao ?? null,
       ]
     );
@@ -79,18 +79,18 @@ async function updateLeito(codigo_leito, leito = {}) {
       `UPDATE leitos
          SET 
             codigo_leito   =  COALESCE($2, codigo_leito),
-            andar          =  COALESCE($3, andar),
-            sala           =  COALESCE($4, sala),
-            id_setor       =  COALESCE($5, id_setor),
+            id_setor       =  COALESCE($3, id_setor),
+            id_paciente    =  COALESCE($4, id_paciente),
+            status         =  COALESCE($5, status),
             descricao      =  COALESVE($6, descricao)
        WHERE codigo_leito = $1
        RETURNING *`,
       [
         codigo_leito, 
         novoCodigo, 
-        leito.andar, 
-        leito.sala, 
-        leito.id_setor, 
+        leito.id_setor,
+        leito.id_paciente,
+        leito.status,
         leito.descricao]
     );
 

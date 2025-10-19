@@ -1,5 +1,5 @@
 // src/services/leitosService.js
-const { pool } = require('../config/db');
+const { pool } = require('../db/pool');
 const bcrypt = require('bcrypt');
 
 async function createUsuario(pessoa = {}, usuario = {}) {
@@ -61,25 +61,29 @@ async function createUsuario(pessoa = {}, usuario = {}) {
     }
 
     // Verificação de campos
-    if (!usuario?.senha || !usuario?.tipo_usuario) {
+    if (!usuario?.senha_hash || !usuario?.role) {
       throw new Error('Campos obrigatórios para criação de usuário!');
     }
 
     // 3) Hash da senha
     const saltRounds = 10;
-    const senhaHash = await bcrypt.hash(usuario.senha, saltRounds);
+    const senhaHash = await bcrypt.hash(usuario.senha_hash, saltRounds);
 
     // 4) Inserir usuário
     const rUsuario = await client.query(
-      `INSERT INTO usuarios (id_pessoa, login, senha, tipo_usuario, ativo)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO usuarios (id_pessoa, login, senha_hash, role, ativo)
+       VALUES (
+        $1, 
+        (SELECT cpf FROM pessoas WHERE id = $1), 
+        $2, 
+        $3, 
+        $4)
        RETURNING *`,
       [
         pessoaId,
-        cpfLimpo,                // login = CPF
-        senhaHash,               // senha com hash
-        usuario.tipo_usuario,
-        usuario.ativo ?? 1      // padrão: ativo = 1
+        senhaHash,
+        usuario.role,
+        usuario.ativo ?? 1
       ]
     );
 
@@ -106,7 +110,7 @@ async function selectUsuario(login) {
        p.telefone,
        usu.id              AS id_usuario,
        usu.login,
-       usu.tipo_usuario,
+       usu.role,
        usu.ativo,
        usu.ultimo_login
      FROM pessoas p
@@ -130,23 +134,23 @@ async function updateUsuario(usuario = {}) {
     
     // Se senha for trocada
     senhaHash = null
-    if (usuario?.senha){
+    if (usuario?.senha_hash){
       const saltRounds = 10;
-      senhaHash = await bcrypt.hash(usuario.senha, saltRounds);
+      senhaHash = await bcrypt.hash(usuario.senha_hash, saltRounds);
     }
 
     // 2) Faz o update dos dados da requisição
     // obs: Tipo Usuário deve seguir -> 'admin', 'enfermeira', 'medico' ou 'paciente'
     const { rows } = await client.query(
       `UPDATE usuarios
-        SET senha         =  COALESCE($1, senha),
-            tipo_usuario  =  COALESCE($2, tipo_usuario),
-            ativo         =  COALESCE($3, ativo)
+        SET senha_hash         =  COALESCE($1, senha_hash),
+            role               =  COALESCE($2, role),
+            ativo              =  COALESCE($3, ativo)
         WHERE login = $4
         RETURNING *`,
       [
         senhaHash, 
-        usuario.tipo_usuario, 
+        usuario.role, 
         usuario.ativo, 
         usuario.login]
     );

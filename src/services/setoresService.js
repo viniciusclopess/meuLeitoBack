@@ -1,5 +1,5 @@
 // src/services/leitosService.js
-const { pool } = require('../config/db');
+const { pool } = require('../db/pool');
 
 async function createSetor(setor = {}) {
   const client = await pool.connect();
@@ -21,12 +21,13 @@ async function createSetor(setor = {}) {
     // Não achou = Cria
     if (rSetor.rowCount === 0) {
       const r = await client.query(
-        `INSERT INTO setores (codigo_setor, nome, andar, ativo )
+        `INSERT INTO setores (codigo_setor, nome, descricao, andar, ativo )
          VALUES ($1, $2, $3, $4)
          RETURNING *`,
         [
           codSetor,
           setor.nome,
+          setor.descricao ?? null,
           setor.andar ?? null,
           setor.ativo ?? true,
         ]
@@ -73,16 +74,18 @@ async function updateSetor(codigo_setor, setor = {}) {
       `UPDATE setores
          SET codigo_setor = COALESCE($2, codigo_setor),
              nome         = COALESCE($3, nome),
-             andar        = COALESCE($4, andar),
-             ativo        = COALESCE($5, ativo)
+             descricao    = COALESCE($4, descricao),
+             andar        = COALESCE($5, andar),
+             ativo        = COALESCE($6, ativo)
        WHERE codigo_setor = $1
        RETURNING *`,
       [
         codigo_setor,           // $1
         novoCodigo,             // $2
         setor.nome ?? null,     // $3
-        setor.andar ?? null,    // $4
-        setor.ativo ?? null     // $5
+        setor.descricao ?? null,     // $4
+        setor.andar ?? null,    // $5
+        setor.ativo ?? null     // $6
       ]
     );
 

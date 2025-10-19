@@ -1,5 +1,5 @@
 // src/services/leitosService.js
-const { pool } = require('../config/db');
+const { pool } = require('../db/pool');
 
 async function createPessoa(pessoa = {}) {
   const client = await pool.connect();
@@ -30,7 +30,7 @@ async function createPessoa(pessoa = {}) {
           pessoa.nome,
           pessoa.nascimento,
           pessoa.telefone ?? null,
-          pessoa.sexo ?? null,
+          pessoa.sexo,
           pessoa.estado_civil ?? null,
           pessoa.naturalidade ?? null, 
           pessoa.nacionalidade ?? null, 

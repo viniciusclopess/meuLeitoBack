@@ -1,13 +1,21 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-// Configuração da conexão com o banco de dados
+// usa SSL simples se PG_SSL_REQUIRE=true OU PGSSLMODE != 'disable'
+const useSsl =
+  process.env.PG_SSL_REQUIRE === 'true' ||
+  (process.env.PGSSLMODE && process.env.PGSSLMODE.toLowerCase() !== 'disable');
+
 const pool = new Pool({
-  user: process.env.DB_USER, // Usuário do banco
-  host: process.env.DB_HOST, // Servidor local
-  database: process.env.DB_NAME, // Nome do banco
-  password: process.env.DB_PASSWORD, // Senha do banco
-  port: process.env.DB_PORT, // Porta padrão do PostgreSQL
+  host: process.env.PGHOST,
+  port: Number(process.env.PGPORT),
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  ssl: useSsl ? { rejectUnauthorized: false } : false, // <<— CORRETO
+  max: 15,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
 // Conectar ao banco de dados

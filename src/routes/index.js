@@ -4,7 +4,6 @@ const router = express.Router();
 
 // sub-routers por domínio
 const pacientes     = require('./pacientesRoutes');
-const medicos       = require('./medicosRoutes');
 const enfermeiras   = require('./enfermeirasRoutes');
 const leitos        = require('./leitosRoutes');
 const usuarios      = require('./usuariosRoutes');
@@ -13,14 +12,24 @@ const setores       = require('./setoresRoutes')
 const chamados      = require('./chamadosRoutes')
 
 router.use('/pacientes',    pacientes);
-router.use('/medicos',      medicos);
 router.use('/enfermeiras',  enfermeiras);
 router.use('/leitos',       leitos);
 router.use('/usuarios',     usuarios);
 router.use('/pessoas',      pessoas);
 router.use('/setores',      setores);
-router.use('/chamados',      chamados);
+router.use('/chamados',     chamados);
 
-router.get('/health', (req, res) => res.json({ ok: true }));
+router.get('/health', (_req, res) => res.json({ ok: true }));
+
+// nova rota: saúde do DB
+router.get('/health/db', async (_req, res) => {
+  try {
+    const { rows } = await pool.query('select now() as ts');
+    res.json({ ok: true, ts: rows[0].ts });
+  } catch (e) {
+    console.error('[DB] /health/db:', e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 module.exports = router;

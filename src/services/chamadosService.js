@@ -1,4 +1,4 @@
-const { pool } = require('../config/db');
+const { pool } = require('../db/pool');
 
 async function insertChamado(chamado = {}){
     const client = await pool.connect();
@@ -6,19 +6,20 @@ async function insertChamado(chamado = {}){
         await client.query('BEGIN');
 
         const rChamado = await client.query(
-        `INSERT INTO chamados (id_paciente, id_leito, id_setor, categoria, mensagem, status)
+        `INSERT INTO chamados (id_paciente, id_leito, id_setor, categoria, mensagem, prioridade, status)
         VALUES (
+            (SELECT id_paciente FROM leitos WHERE id = $1), 
             $1, 
-            $2, 
-            (SELECT id_setor FROM leitos WHERE id = $2), 
+            (SELECT id_setor FROM leitos WHERE id = $1), 
+            $2,
             $3,
             $4, 
             'pendente'
         ) RETURNING *;`, 
         [
-            chamado.id_paciente,
             chamado.id_leito,
             chamado.categoria,
+            chamado.prioridade ?? 'MEDIA',
             chamado.mensagem ?? null
         ]);
 

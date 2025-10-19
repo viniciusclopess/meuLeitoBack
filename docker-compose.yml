@@ -8,6 +8,7 @@ services:
     volumes:
       - .:/app       # monta o código local dentro do container
       - /app/node_modules  # evita conflito entre node_modules local e do container
+
     environment:
       - NODE_ENV=development
     command: npm run dev
