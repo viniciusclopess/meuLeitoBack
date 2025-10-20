@@ -30,7 +30,6 @@ io.on('connection', (socket) => {
   });
 });
 
-
 // expõe o io para uso em outras partes do app (rotas, controladores)
 app.set('io', io);
 

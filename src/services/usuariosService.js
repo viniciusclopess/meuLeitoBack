@@ -32,7 +32,7 @@ async function createUsuario(pessoa = {}, usuario = {}) {
           pessoa.nome,
           pessoa.nascimento,
           pessoa.telefone ?? null,
-          pessoa.sexo ?? null,
+          pessoa.sexo,
           pessoa.estado_civil ?? null,
           pessoa.naturalidade ?? null, 
           pessoa.nacionalidade ?? null, 
