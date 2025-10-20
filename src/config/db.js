@@ -8,15 +8,16 @@ const pool = new Pool({
   database: process.env.DB_NAME, // Nome do banco
   password: process.env.DB_PASSWORD, // Senha do banco
   port: process.env.DB_PORT, // Porta padrão do PostgreSQL
+  ssl: { rejectUnauthorized: false }
 });
-
+console.log("Configuração do banco de dados carregada.");
 // Conectar ao banco de dados
 const connectDB = async () => {
-  try{
+  try {
     await pool.connect();
     console.log("Conectado ao PostgreSQL");
   }
-  catch(err){
+  catch (err) {
     console.error("Erro ao conectar ao PostgreSQl: ", err);
     process.exit(1);
   }

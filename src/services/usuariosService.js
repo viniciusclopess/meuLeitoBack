@@ -2,7 +2,19 @@
 const { pool } = require('../config/db');
 const bcrypt = require('bcrypt');
 
+async function teste() {
+  try {
+    await pool.connect();
+    console.log("Conexão com o banco de dados bem sucedida.");
+  }
+  catch (err) {
+    console.error("Erro ao conectar ao banco de dados: ", err);
+  }
+};
+
+
 async function createUsuario(pessoa = {}, usuario = {}) {
+  teste();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -34,8 +46,8 @@ async function createUsuario(pessoa = {}, usuario = {}) {
           pessoa.telefone ?? null,
           pessoa.sexo ?? null,
           pessoa.estado_civil ?? null,
-          pessoa.naturalidade ?? null, 
-          pessoa.nacionalidade ?? null, 
+          pessoa.naturalidade ?? null,
+          pessoa.nacionalidade ?? null,
           pessoa.uf ?? null,
           pessoa.endereco ?? null,
           pessoa.email ?? null
@@ -127,10 +139,10 @@ async function updateUsuario(usuario = {}) {
 
     // 1) Verifica se há login na requisição
     if (!usuario?.login) throw new Error('Login obrigatório.');
-    
+
     // Se senha for trocada
     senhaHash = null
-    if (usuario?.senha){
+    if (usuario?.senha) {
       const saltRounds = 10;
       senhaHash = await bcrypt.hash(usuario.senha, saltRounds);
     }
@@ -145,9 +157,9 @@ async function updateUsuario(usuario = {}) {
         WHERE login = $4
         RETURNING *`,
       [
-        senhaHash, 
-        usuario.tipo_usuario, 
-        usuario.ativo, 
+        senhaHash,
+        usuario.tipo_usuario,
+        usuario.ativo,
         usuario.login]
     );
 

@@ -6,7 +6,7 @@ async function postPessoa(req, res) {
 
     const resultado = await createPessoa(pessoa, usuario);
 
-    if (resultado.warning) { 
+    if (resultado.warning) {
       return res.status(200).json({
         message: resultado.warning,
         data: resultado
@@ -26,29 +26,29 @@ async function postPessoa(req, res) {
   }
 }
 
-async function getPessoa(req, res){
-  try{
-    const { login } = req.body;
-    const user = await selectPessoa(login);
+async function getPessoa(req, res) {
+  try {
+    const { nome } = req.body;
+    const user = await selectPessoa(nome);
 
-    if(!user) return res.status(404).json({message: "Pessoa não encontrada."});
+    if (!user) return res.status(404).json({ message: "Pessoa não encontrada." });
     return res.status(200).json({ data: user })
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao buscar pessoa.', error: err.message});
+    return res.status(400).json({ message: 'Erro ao buscar pessoa.', error: err.message });
   }
 }
 
-async function putPessoa(req, res){
-  try{
-    const { usuario = {}} = req.body;
+async function putPessoa(req, res) {
+  try {
+    const { usuario = {} } = req.body;
     const user = await updatePessoa(usuario)
 
-    if(!user) return res.status(404).json({message: "Pessoa não encontrada."});
-    return res.status(200).json({ data: user})
-  } catch(err){
+    if (!user) return res.status(404).json({ message: "Pessoa não encontrada." });
+    return res.status(200).json({ data: user })
+  } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao atualizar pessoa.', error: err.message})
+    return res.status(400).json({ message: 'Erro ao atualizar pessoa.', error: err.message })
   }
 }
 
