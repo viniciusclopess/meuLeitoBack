@@ -2,14 +2,14 @@ const { createPessoa, selectPessoa, updatePessoa } = require('../services/pessoa
 
 async function postPessoa(req, res) {
   try {
-    const { pessoa, usuario } = req.body;
+    const { pessoaBody } = req.body;
 
-    const resultado = await createPessoa(pessoa, usuario);
+    const pessoa = await createPessoa(pessoaBody);
 
-    if (resultado.warning) { 
+    if (pessoa.warning) { 
       return res.status(200).json({
-        message: resultado.warning,
-        data: resultado
+        message: pessoa.warning,
+        data: pessoa
       });
     }
 
@@ -28,11 +28,11 @@ async function postPessoa(req, res) {
 
 async function getPessoa(req, res){
   try{
-    const { login } = req.body;
-    const user = await selectPessoa(login);
+    const { nome } = req.body;
+    const pessoa = await selectPessoa(nome);
 
-    if(!user) return res.status(404).json({message: "Pessoa não encontrada."});
-    return res.status(200).json({ data: user })
+    if(!pessoa) return res.status(404).json({message: "Pessoa não encontrada."});
+    return res.status(200).json({ data: pessoa })
   } catch (err) {
     console.error(err);
     return res.status(400).json({ message: 'Erro ao buscar pessoa.', error: err.message});
@@ -41,11 +41,11 @@ async function getPessoa(req, res){
 
 async function putPessoa(req, res){
   try{
-    const { usuario = {}} = req.body;
-    const user = await updatePessoa(usuario)
+    const { pessoaBody = {}} = req.body;
+    const pessoa = await updatePessoa(pessoaBody)
 
-    if(!user) return res.status(404).json({message: "Pessoa não encontrada."});
-    return res.status(200).json({ data: user})
+    if(!pessoa) return res.status(404).json({message: "Pessoa não encontrada."});
+    return res.status(200).json({ data: pessoa})
   } catch(err){
     console.error(err);
     return res.status(400).json({ message: 'Erro ao atualizar pessoa.', error: err.message})

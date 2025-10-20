@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h3>Teste WebSocket Meu Leito</h3>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      const socket = io("ws://localhost:3500", { transports: ["websocket"] });
+
+      socket.on("connect", () => {
+        console.log("✅ Conectado:", socket.id);
+      });
+
+      socket.on("disconnect", () => {
+        console.log("❌ Desconectado");
+      });
+    </script>
+  </body>
+</html>

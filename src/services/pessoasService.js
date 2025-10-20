@@ -55,18 +55,15 @@ async function createPessoa(pessoa = {}) {
 }
 
 // Get de 1 usuário
-async function selectPessoa(cpf) {
-  if (!cpf) throw new Error('CPF é obrigatório.');
-
-  const { rows } = await pool.query(
-    `SELECT * FROM pessoas
-     WHERE cpf = $1
-     LIMIT 1`,
-    [cpf]
-  );
-
-  if (rows.length === 0) return null;
-  return rows[0];
+async function selectPessoa(nome) {
+  let query = 'SELECT * FROM pessoas';
+  const params = [];
+  if (nome) {
+    query += ' WHERE nome ILIKE $1';
+    params.push(`%${nome}%`);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
 }
 
 async function updatePessoa(pessoa = {}) {
