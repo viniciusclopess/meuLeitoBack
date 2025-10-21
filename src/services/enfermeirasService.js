@@ -1,22 +1,24 @@
 const { pool } = require('../db/pool');
 
+const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+
 /**
  * Regras:
  *  1) Se existir CPF e já houver pessoa com esse CPF, reutiliza.
  *  2) Se não existir pessoa, cria nova.
  *  3) Se já for enfermeiras (pessoa_id já em médicos), retorna aviso.
  */
-async function createEnfermeira(pessoa = {}, enfermeira = {}) {
+async function insertEnfermeira(enfermeira = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    if (!pessoa?.cpf || !enfermeira?.codigo_setor) {
+    if (!enfermeira?.cpf || !enfermeira?.codigo_setor) {
       throw new Error('Campos obrigatórios!');
     }
 
     // Ajeitar CPF
-    const cpfLimpo = String(pessoa.cpf).replace(/\D/g, '');
+    const cpfLimpo = cleanCpf(enfermeira.cpf)
 
     // 1) Buscar pessoa por CPF
     const rPessoa = await client.query(
@@ -33,16 +35,16 @@ async function createEnfermeira(pessoa = {}, enfermeira = {}) {
          RETURNING id`,
         [
           cpfLimpo,
-          pessoa.nome,
-          pessoa.nascimento,
-          pessoa.telefone ?? null,
-          pessoa.sexo ?? null,
-          pessoa.estado_civil ?? null,
-          pessoa.naturalidade ?? null, 
-          pessoa.nacionalidade ?? null, 
-          pessoa.uf ?? null,
-          pessoa.endereco ?? null,
-          pessoa.email ?? null
+          enfermeira.nome,
+          enfermeira.nascimento,
+          enfermeira.telefone ?? null,
+          enfermeira.sexo,
+          enfermeira.estado_civil ?? null,
+          enfermeira.naturalidade ?? null, 
+          enfermeira.nacionalidade ?? null, 
+          enfermeira.uf ?? null,
+          enfermeira.endereco ?? null,
+          enfermeira.email ?? null
         ]
       );
       pessoaId = r.rows[0].id;
@@ -78,14 +80,14 @@ async function createEnfermeira(pessoa = {}, enfermeira = {}) {
 
     // 4) Inserir enfermeira
     const rEnfermeira = await client.query(
-      `INSERT INTO enfermeiras (id_pessoa, id_setor, status, obs)
+      `INSERT INTO enfermeiras (id_pessoa, id_setor, especialidade, ativo)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [
         pessoaId,
         setorId,
-        enfermeira.status ?? null,
-        enfermeira.obs ?? null
+        enfermeira.especialidade ?? null,
+        enfermeira.ativo ?? true
       ]
     );
 
@@ -99,60 +101,63 @@ async function createEnfermeira(pessoa = {}, enfermeira = {}) {
   }
 }
 
-const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
 
-async function selectEnfermeira(cpf) {
-  const cpfClean = cleanCpf(cpf);
-  if (!cpfClean) throw new Error('CPF é obrigatório.');
-
-  const { rows } = await pool.query(
-    `SELECT 
-       p.nome,
-       p.cpf,
-       p.nascimento,
-       p.sexo,
-       p.telefone,
-       enf.id              AS id_enfermeira,
-       enf.setor,
-       enf.status,
-       enf.obs
-     FROM pessoas p
-     INNER JOIN enfermeiras enf ON enf.id_pessoa = p.id
-     WHERE p.cpf = $1
-     LIMIT 1`,
-    [cpfClean]
-  );
-
-  if (rows.length === 0) return null;
-
-  return rows[0];
+// Get de 1 usuário
+async function selectEnfermeira(nome) {
+  let query = 
+  `SELECT 
+      enf.id              AS id_enfermeira,
+      p.id                AS id_pessoa,
+      enf.id_setor        AS id_setor,
+      p.nome              AS nome,
+      p.cpf               AS cpf,
+      p.sexo              AS sexo,
+      p.nascimento        AS nascimento,
+      enf.especialidade   AS especialidade,
+      p.telefone          AS telefone,
+      p.estado_civil      AS estado_civil,
+      p.naturalidade      AS naturalidade,
+      p.nacionalidade     AS nacionalidade,
+      p.uf                AS uf,
+      p.endereco          AS endereco,
+      p.email             AS email,
+      enf.ativo           AS ativo
+      FROM enfermeiras enf
+    INNER JOIN pessoas p ON p.id = enf.id_pessoa
+  `;
+  const params = [];
+  if (nome) {
+    query += ' WHERE p.nome ILIKE $1';
+    params.push(`%${nome}%`);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
 }
 
-async function updateEnfermeira(cpf, enfermeira = {}) {
+async function updateEnfermeira(enfermeira = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
-    // 1) Verifica se há CPF na requisição
-    const cpfClean = cleanCpf(cpf);
-    if (!cpfClean) throw new Error('CPF é obrigatório.');
 
-    // 2) Faz o update dos dados da requisição
+    if (!enfermeira.id) throw new Error('Id é obrigatório.');
+
     const { rows } = await client.query(
-      `UPDATE enfermeiras enf
-      SET 
-          id_setor        =  COALESCE($2, ativo)
-          status          =  COALESCE($3, senha),
-          obs             =  COALESCE($4, tipo_usuario),
-      FROM pessoas p
-      WHERE enf.id_pessoa = p.id
-        AND p.cpf = $1
-      RETURNING enf.*`,
-      [cpfClean, enfermeira.id_setor, enfermeira.status, enfermeira.obs]
+      `UPDATE enfermeiras
+          SET id_setor      = COALESCE($2, id_setor),
+              especialidade = COALESCE($3, especialidade),
+              ativo         = COALESCE($4, ativo)
+        WHERE id = $1
+      RETURNING *`,
+      [
+        enfermeira.id,
+        enfermeira.id_setor ?? null,
+        enfermeira.especialidade ?? null,
+        enfermeira.ativo ?? null
+      ]
     );
 
     await client.query('COMMIT');
-    if (rows.length === 0) return null;
+    if (rows.length === 0) return null; // não encontrou o id
     return rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
@@ -162,4 +167,40 @@ async function updateEnfermeira(cpf, enfermeira = {}) {
   }
 }
 
-module.exports = { createEnfermeira, selectEnfermeira, updateEnfermeira };
+async function removeEnfermeira(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID da enfermeira é obrigatório.');
+
+    const result = await client.query(
+      `DELETE FROM enfermeiras 
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // Tratamento para violação de integridade (FK)
+    if (err.code === '23503') {
+      throw new Error(
+        'Não foi possível excluir: há registros relacionados a esta enfermeira.'
+      );
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+
+
+module.exports = { insertEnfermeira, selectEnfermeira, updateEnfermeira, removeEnfermeira };

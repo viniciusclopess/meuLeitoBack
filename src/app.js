@@ -27,8 +27,6 @@ const corsOptions = {
 
 // aplica CORS em todas as rotas
 app.use(cors(corsOptions));
-// responde às requisições preflight (OPTIONS)
-app.options('*', cors(corsOptions));
 
 // suas rotas
 const api = require('./routes');

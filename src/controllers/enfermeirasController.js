@@ -1,10 +1,10 @@
-const { createEnfermeira, selectEnfermeira, updateEnfermeira } = require('../services/enfermeirasService');
+const { insertEnfermeira, selectEnfermeira, updateEnfermeira, removeEnfermeira } = require('../services/enfermeirasService');
 
 async function postEnfermeira(req, res) {
   try {
-    const { pessoa, enfermeira } = req.body;
+    const { enfermeira } = req.body;
 
-    const resultado = await createEnfermeira(pessoa, enfermeira);
+    const resultado = await insertEnfermeira( enfermeira );
 
     if (resultado.warning) {
       return res.status(200).json({
@@ -26,30 +26,41 @@ async function postEnfermeira(req, res) {
   }
 }
 
-async function getEnfermeira(req, res){
-  try{
-    const { cpf } = req.body;
-    const med = await selectEnfermeira(cpf);
-
-    if(!med) return res.status(404).json({message: "Enfermeira não encontrada"});
-    return res.status(200).json({ data: med })
+async function getEnfermeira(req, res) {
+  try {
+    const { nome } = req.query;
+    const resultado = await selectEnfermeira(nome);
+    return res.status(200).json(resultado);
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao buscar enfermeira.', error: err.message});
+    return res.status(400).json({ message: 'Erro ao buscar enfermeiras.' });
   }
 }
 
 async function putEnfermeira(req, res){
   try{
-    const {cpf,  enfermeira = {}} = req.body;
-    const med = await updateEnfermeira(cpf, enfermeira)
+    const { enfermeira } = req.body;
+    const resultado = await updateEnfermeira(enfermeira)
 
-    if(!med) return res.status(404).json({message: "Enfermeira não encontrada"});
-    return res.status(200).json({ data: med})
+    if(!resultado) return res.status(404).json({message: "Enfermeira não encontrada"});
+    return res.status(200).json({ data: resultado})
   } catch(err){
     console.error(err);
     return res.status(400).json({ message: 'Erro ao atualizar enfermeira.', error: err.message})
   }
 }
 
-module.exports = { postEnfermeira, getEnfermeira, putEnfermeira };
+async function deleteEnfermeira(req, res){
+  try{
+    const { id } = req.body;
+    const resultado = await removeEnfermeira(id)
+
+    if(!resultado) return res.status(404).json({message: "Enfermeira não encontrada"});
+    return res.status(200).json({ data: resultado})
+  } catch(err){
+    console.error(err);
+    return res.status(400).json({ message: 'Erro ao deletar enfermeira.', error: err.message})
+  }
+}
+
+module.exports = { postEnfermeira, getEnfermeira, putEnfermeira, deleteEnfermeira };
