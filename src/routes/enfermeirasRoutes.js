@@ -6,6 +6,6 @@ const router = express.Router();
 router.post('/', postEnfermeira);
 router.get('/', getEnfermeira);
 router.put('/', putEnfermeira);
-router.delete('/', deleteEnfermeira);
+router.delete('/:id', deleteEnfermeira);
 
 module.exports = router;

@@ -30,6 +30,7 @@ async function getEnfermeira(req, res) {
   try {
     const { nome } = req.query;
     const resultado = await selectEnfermeira(nome);
+    if(!resultado) return res.status(404).json({message: "Enfermeira não encontrada"});
     return res.status(200).json(resultado);
   } catch (err) {
     console.error(err);
@@ -43,7 +44,7 @@ async function putEnfermeira(req, res){
     const resultado = await updateEnfermeira(enfermeira)
 
     if(!resultado) return res.status(404).json({message: "Enfermeira não encontrada"});
-    return res.status(200).json({ data: resultado})
+    return res.status(200).json( resultado )
   } catch(err){
     console.error(err);
     return res.status(400).json({ message: 'Erro ao atualizar enfermeira.', error: err.message})
@@ -52,11 +53,10 @@ async function putEnfermeira(req, res){
 
 async function deleteEnfermeira(req, res){
   try{
-    const { id } = req.body;
+    const id  = Number(req.params.id);
     const resultado = await removeEnfermeira(id)
-
     if(!resultado) return res.status(404).json({message: "Enfermeira não encontrada"});
-    return res.status(200).json({ data: resultado})
+    return res.status(200).json(resultado)
   } catch(err){
     console.error(err);
     return res.status(400).json({ message: 'Erro ao deletar enfermeira.', error: err.message})

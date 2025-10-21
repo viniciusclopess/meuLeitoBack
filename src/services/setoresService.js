@@ -1,7 +1,6 @@
-// src/services/leitosService.js
 const { pool } = require('../db/pool');
 
-async function createSetor(setor = {}) {
+async function insertSetor(setor = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -22,7 +21,7 @@ async function createSetor(setor = {}) {
     if (rSetor.rowCount === 0) {
       const r = await client.query(
         `INSERT INTO setores (codigo_setor, nome, descricao, andar, ativo )
-         VALUES ($1, $2, $3, $4)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
         [
           codSetor,
@@ -47,28 +46,28 @@ async function createSetor(setor = {}) {
   }
 }
 
-// Get de 1 setor
+// Get de setores
 async function selectSetor(codigo_setor) {
-  if (!codigo_setor) throw new Error('Código do setor é obrigatório.');
+  let query =
+    `SELECT * 
+    FROM setores`;
 
-  const { rows } = await pool.query(
-    `SELECT * FROM setores
-     WHERE codigo_setor = $1
-     LIMIT 1`,
-    [codigo_setor]
-  );
-
-  if (rows.length === 0) return null;
-  return rows[0];
+  const params = [];
+  if (codigo_setor) {
+    query += ' WHERE setores.codigo_setor ILIKE $1';
+    params.push(`%${codigo_setor}%`);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
 }
 
-async function updateSetor(codigo_setor, setor = {}) {
+async function updateSetor(setor = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    if (!codigo_setor) throw new Error('Código do setor obrigatório.');
+    if (!setor.id) throw new Error('Código do setor obrigatório.');
 
-    const novoCodigo = setor.novo_codigo_setor ?? null;
+    const novoCodigo = setor.codigo_setor ?? null;
 
     const { rows } = await client.query(
       `UPDATE setores
@@ -77,15 +76,15 @@ async function updateSetor(codigo_setor, setor = {}) {
              descricao    = COALESCE($4, descricao),
              andar        = COALESCE($5, andar),
              ativo        = COALESCE($6, ativo)
-       WHERE codigo_setor = $1
+       WHERE id = $1
        RETURNING *`,
       [
-        codigo_setor,           // $1
-        novoCodigo,             // $2
-        setor.nome ?? null,     // $3
-        setor.descricao ?? null,     // $4
-        setor.andar ?? null,    // $5
-        setor.ativo ?? null     // $6
+        setor.id,
+        novoCodigo,
+        setor.nome ?? null,
+        setor.descricao ?? null,
+        setor.andar ?? null,
+        setor.ativo ?? null
       ]
     );
 
@@ -100,5 +99,43 @@ async function updateSetor(codigo_setor, setor = {}) {
   }
 }
 
+async function removeSetor(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-module.exports = { createSetor, selectSetor, updateSetor };
+    if (!id || !Number.isInteger(id) || id <= 0) {
+      throw new Error('ID do setor inválido.');
+    }
+
+    const result = await client.query(
+      `DELETE FROM setores
+        WHERE id = $1
+      RETURNING *`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null; // não encontrou o id
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // 23503 = violação de chave estrangeira (há registros dependentes)
+    if (err.code === '23503') {
+      throw new Error('Não foi possível excluir: há registros relacionados a este setor.');
+    }
+    
+    // 22P02 = id inválido (ex.: string que não converte pra int)
+    if (err.code === '22P02') {
+      throw new Error('ID do setor inválido.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { insertSetor, selectSetor, updateSetor, removeSetor };
