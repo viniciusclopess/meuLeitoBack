@@ -1,18 +1,15 @@
-const { createPessoa, selectPessoa, updatePessoa } = require('../services/pessoasService');
+const { createPessoa, selectPessoa, updatePessoa, removePessoa } = require('../services/pessoasService');
 
 async function postPessoa(req, res) {
   try {
-    const { pessoaBody } = req.body;
-
-    const pessoa = await createPessoa(pessoaBody);
-
-    if (pessoa.warning) { 
+    const { pessoa } = req.body;
+    const resultado = await createPessoa(pessoa);
+    if (resultado.warning) { 
       return res.status(200).json({
-        message: pessoa.warning,
-        data: pessoa
+        message: resultado.warning,
+        data: resultado
       });
     }
-
     return res.status(201).json({
       message: 'Pessoa criada com sucesso.',
       data: resultado
@@ -26,30 +23,41 @@ async function postPessoa(req, res) {
   }
 }
 
-async function getPessoa(req, res){
-  try{
-    const { nome } = req.body;
-    const pessoa = await selectPessoa(nome);
-
-    if(!pessoa) return res.status(404).json({message: "Pessoa não encontrada."});
-    return res.status(200).json({ data: pessoa })
+async function getPessoa(req, res) {
+  try {
+    const { nome } = req.query;
+    const resultado = await selectPessoa(nome);
+    if(!resultado) return res.status(404).json({message: "Pessoa não encontrada"});
+    return res.status(200).json(resultado);
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao buscar pessoa.', error: err.message});
+    return res.status(400).json({ message: 'Erro ao buscar pessoa.' });
   }
 }
 
 async function putPessoa(req, res){
   try{
-    const { pessoaBody = {}} = req.body;
-    const pessoa = await updatePessoa(pessoaBody)
+    const { pessoa } = req.body;
+    const resultado = await updatePessoa(pessoa)
 
-    if(!pessoa) return res.status(404).json({message: "Pessoa não encontrada."});
-    return res.status(200).json({ data: pessoa})
+    if(!resultado) return res.status(404).json({message: "Pessoa não encontrada."});
+    return res.status(200).json({ data: resultado})
   } catch(err){
     console.error(err);
     return res.status(400).json({ message: 'Erro ao atualizar pessoa.', error: err.message})
   }
 }
 
-module.exports = { postPessoa, getPessoa, putPessoa };
+async function deletePessoa(req, res){
+  try{
+    const id  = Number(req.params.id);
+    const resultado = await removePessoa(id)
+    if(!resultado) return res.status(404).json({message: "Pessoa não encontrada"});
+    return res.status(200).json(resultado)
+  } catch(err){
+    console.error(err);
+    return res.status(400).json({ message: 'Erro ao deletar pessoa.', error: err.message})
+  }
+}
+
+module.exports = { postPessoa, getPessoa, putPessoa, deletePessoa };

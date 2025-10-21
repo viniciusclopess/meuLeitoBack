@@ -1,17 +1,19 @@
 // src/services/leitosService.js
 const { pool } = require('../db/pool');
 
+const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+
 async function createPessoa(pessoa = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    if (!pessoa?.cpf || !pessoa?.nome || !pessoa?.nascimento) {
+    if (!pessoa?.cpf || !pessoa?.nome || !pessoa?.nascimento || !pessoa?.sexo ) {
       throw new Error('Campos obrigatórios!');
     }
 
     // Ajeitar CPF
-    const cpfLimpo = String(pessoa.cpf).replace(/\D/g, '');
+    const cpfLimpo = cleanCpf(pessoa.cpf);
 
     // 1) Buscar pessoa por CPF
     const rPessoa = await client.query(
@@ -54,7 +56,7 @@ async function createPessoa(pessoa = {}) {
   }
 }
 
-// Get de 1 usuário
+// Get de pessoas
 async function selectPessoa(nome) {
   let query = 'SELECT * FROM pessoas';
   const params = [];
@@ -71,14 +73,13 @@ async function updatePessoa(pessoa = {}) {
   try {
     await client.query('BEGIN');
 
-    // 1) Verifica se há login na requisição
-    if (!pessoa?.cpf) throw new Error('Login obrigatório.');
+    if (!pessoa?.id) throw new Error('Login obrigatório.');
 
-    // 2) Faz o update dos dados da requisição
-    // obs: Tipo Usuário deve seguir -> 'admin', 'enfermeira', 'medico' ou 'paciente'
     const { rows } = await client.query(
-      `UPDATE usuarios
-        SET nome            =  COALESCE($2, nome),
+      `UPDATE pessoas
+        SET 
+            cpf             =  COALESCE($1, cpf),
+            nome            =  COALESCE($2, nome),
             nascimento      =  COALESCE($3, nascimento),
             telefone        =  COALESCE($4, telefone),
             sexo            =  COALESCE($5, sexo),
@@ -88,11 +89,12 @@ async function updatePessoa(pessoa = {}) {
             uf              =  COALESCE($9, uf),
             endereco        =  COALESCE($10, endereco),
             email           =  COALESCE($11, email)
-        WHERE cpf = $1
+        WHERE id = $12
         RETURNING *`,
       [
         pessoa.cpf, pessoa.nome, pessoa.nascimento, pessoa.telefone, pessoa.sexo, pessoa.estado_civil, 
-        pessoa.naturalidade, pessoa.nacionalidade, pessoa.uf, pessoa.endereco, pessoa.email]
+        pessoa.naturalidade, pessoa.nacionalidade, pessoa.uf, pessoa.endereco, pessoa.email, pessoa.id
+      ]
     );
 
     await client.query('COMMIT');
@@ -106,4 +108,38 @@ async function updatePessoa(pessoa = {}) {
   }
 }
 
-module.exports = { createPessoa, selectPessoa, updatePessoa };
+async function removePessoa(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID da pessoa é obrigatório.');
+
+    const result = await client.query(
+      `DELETE FROM pessoas 
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // Tratamento para violação de integridade (FK)
+    if (err.code === '23503') {
+      throw new Error(
+        'Não foi possível excluir: há registros relacionados a esta pessoa.'
+      );
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { createPessoa, selectPessoa, updatePessoa, removePessoa };
