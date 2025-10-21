@@ -2,12 +2,6 @@ const { pool } = require('../db/pool');
 
 const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
 
-/**
- * Regras:
- *  1) Se existir CPF e já houver pessoa com esse CPF, reutiliza.
- *  2) Se não existir pessoa, cria nova.
- *  3) Se já for enfermeiras (pessoa_id já em médicos), retorna aviso.
- */
 async function insertEnfermeira(enfermeira = {}) {
   const client = await pool.connect();
   try {
@@ -101,8 +95,6 @@ async function insertEnfermeira(enfermeira = {}) {
   }
 }
 
-
-// Get de 1 usuário
 async function selectEnfermeira(nome) {
   let query = 
   `SELECT 
