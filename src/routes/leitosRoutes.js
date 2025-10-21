@@ -6,6 +6,6 @@ const router = express.Router();
 router.post('/', postLeito);
 router.get('/', getLeito);
 router.put('/', putLeito);
-router.delte('/:id', deleteLeito);
+router.delete('/:id', deleteLeito);
 
 module.exports = router;
