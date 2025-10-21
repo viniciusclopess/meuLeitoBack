@@ -2,19 +2,21 @@
 const { pool } = require('../db/pool');
 const bcrypt = require('bcrypt');
 
-async function createUsuario(pessoa = {}, usuario = {}) {
+const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+
+async function insertUsuario(usuario = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    if (!pessoa?.cpf) {
+    if (!usuario?.cpf) {
       throw new Error('Campos obrigatórios!');
     }
 
     // Ajeitar CPF
-    const cpfLimpo = String(pessoa.cpf).replace(/\D/g, '');
+    const cpfLimpo = cleanCpf(usuario.cpf);
 
-    // 1) Buscar pessoa por CPF
+    // 1) Buscar usuario por CPF
     const rPessoa = await client.query(
       'SELECT id FROM pessoas WHERE cpf = $1',
       [cpfLimpo]
@@ -29,16 +31,16 @@ async function createUsuario(pessoa = {}, usuario = {}) {
          RETURNING id`,
         [
           cpfLimpo,
-          pessoa.nome,
-          pessoa.nascimento,
-          pessoa.telefone ?? null,
-          pessoa.sexo,
-          pessoa.estado_civil ?? null,
-          pessoa.naturalidade ?? null, 
-          pessoa.nacionalidade ?? null, 
-          pessoa.uf ?? null,
-          pessoa.endereco ?? null,
-          pessoa.email ?? null
+          usuario.nome,
+          usuario.nascimento,
+          usuario.telefone ?? null,
+          usuario.sexo,
+          usuario.estado_civil ?? null,
+          usuario.naturalidade ?? null, 
+          usuario.nacionalidade ?? null, 
+          usuario.uf ?? null,
+          usuario.endereco ?? null,
+          usuario.email ?? null
         ]
       );
       pessoaId = r.rows[0].id;
@@ -61,29 +63,25 @@ async function createUsuario(pessoa = {}, usuario = {}) {
     }
 
     // Verificação de campos
-    if (!usuario?.senha_hash || !usuario?.role) {
+    if (!usuario?.senha || !usuario?.role) {
       throw new Error('Campos obrigatórios para criação de usuário!');
     }
 
     // 3) Hash da senha
     const saltRounds = 10;
-    const senhaHash = await bcrypt.hash(usuario.senha_hash, saltRounds);
+    const senhaHash = await bcrypt.hash(usuario.senha, saltRounds);
 
     // 4) Inserir usuário
     const rUsuario = await client.query(
-      `INSERT INTO usuarios (id_pessoa, login, senha_hash, role, ativo)
-       VALUES (
-        $1, 
-        (SELECT cpf FROM pessoas WHERE id = $1), 
-        $2, 
-        $3, 
-        $4)
+      `INSERT INTO usuarios (id_pessoa, login, senha, role, ativo)
+       VALUES ( $1, $2, $3, $4, $5)
        RETURNING *`,
       [
         pessoaId,
+        usuario.cpf,
         senhaHash,
         usuario.role,
-        usuario.ativo ?? 1
+        usuario.ativo ?? true
       ]
     );
 
@@ -97,31 +95,35 @@ async function createUsuario(pessoa = {}, usuario = {}) {
   }
 }
 
-// Get de 1 usuário
-async function selectUsuario(login) {
-  if (!login) throw new Error('Login é obrigatório.');
-
-  const { rows } = await pool.query(
-    `SELECT 
-       p.nome,
-       p.cpf,
-       p.nascimento,
-       p.sexo,
-       p.telefone,
-       usu.id              AS id_usuario,
-       usu.login,
-       usu.role,
-       usu.ativo,
-       usu.ultimo_login
-     FROM pessoas p
-     INNER JOIN usuarios usu ON usu.id_pessoa = p.id
-     WHERE usu.login = $1
-     LIMIT 1`,
-    [login]
-  );
-
-  if (rows.length === 0) return null;
-  return rows[0];
+// Get de usuários
+async function selectUsuario(nome) {
+  let query = 
+  `SELECT 
+      usu.id              AS id_usuario,
+      p.id                AS id_pessoa,
+      p.nome              AS nome,
+      p.cpf               AS cpf,
+      p.sexo              AS sexo,
+      p.nascimento        AS nascimento,
+      p.telefone          AS telefone,
+      p.estado_civil      AS estado_civil,
+      p.naturalidade      AS naturalidade,
+      p.nacionalidade     AS nacionalidade,
+      p.uf                AS uf,
+      p.endereco          AS endereco,
+      p.email             AS email,
+      usu.login           AS login,
+      usu.role            AS role,
+      usu.ativo           AS ativo
+      FROM usuarios usu
+    INNER JOIN pessoas p ON p.id = usu.id_pessoa`;
+  const params = [];
+  if (nome) {
+    query += ' WHERE p.nome ILIKE $1';
+    params.push(`%${nome}%`);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
 }
 
 async function updateUsuario(usuario = {}) {
@@ -129,30 +131,28 @@ async function updateUsuario(usuario = {}) {
   try {
     await client.query('BEGIN');
 
-    // 1) Verifica se há login na requisição
     if (!usuario?.login) throw new Error('Login obrigatório.');
-    
-    // Se senha for trocada
+
     senhaHash = null
-    if (usuario?.senha_hash){
+    if (usuario?.senha){
       const saltRounds = 10;
-      senhaHash = await bcrypt.hash(usuario.senha_hash, saltRounds);
+      senhaHash = await bcrypt.hash(usuario.senha, saltRounds);
     }
 
-    // 2) Faz o update dos dados da requisição
-    // obs: Tipo Usuário deve seguir -> 'admin', 'enfermeira', 'medico' ou 'paciente'
+    // obs: Tipo Usuário deve seguir -> 'admin', 'gestor', 'comum'
     const { rows } = await client.query(
       `UPDATE usuarios
-        SET senha_hash         =  COALESCE($1, senha_hash),
-            role               =  COALESCE($2, role),
-            ativo              =  COALESCE($3, ativo)
-        WHERE login = $4
+        SET senha              =  COALESCE($2, senha),
+            role               =  COALESCE($3, role),
+            ativo              =  COALESCE($4, ativo)
+        WHERE login = $1
         RETURNING *`,
       [
+        usuario.login,
         senhaHash, 
         usuario.role, 
-        usuario.ativo, 
-        usuario.login]
+        usuario.ativo
+      ]
     );
 
     await client.query('COMMIT');
@@ -166,4 +166,37 @@ async function updateUsuario(usuario = {}) {
   }
 }
 
-module.exports = { createUsuario, selectUsuario, updateUsuario };
+async function removeUsuario(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID da enfermeira é obrigatório.');
+
+    const result = await client.query(
+      `DELETE FROM usuarios 
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // Tratamento para violação de integridade (FK)
+    if (err.code === '23503') {
+      throw new Error(
+        'Não foi possível excluir: há registros relacionados a esta enfermeira.'
+      );
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+module.exports = { insertUsuario, selectUsuario, updateUsuario, removeUsuario };
