@@ -1,33 +1,29 @@
 const { pool } = require('../db/pool');
 
-async function insertSetor(setor = {}) {
+async function insertSetor(setor) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    if (!setor?.codigo_setor || !setor?.nome) {
+    if (!setor?.nome) {
       throw new Error('Campos obrigatórios!');
     }
-    const codSetor = setor.codigo_setor
 
     // 1) Buscar setor por código
     const rSetor = await client.query(
-      'SELECT id FROM setores WHERE codigo_setor = $1',
-      [codSetor]
+      'SELECT "Id" FROM "Setores" WHERE "Nome" = $1',
+      [setor.id]
     );
     setorDados = null
 
     // Não achou = Cria
     if (rSetor.rowCount === 0) {
       const r = await client.query(
-        `INSERT INTO setores (codigo_setor, nome, descricao, andar, ativo )
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO "Setores" ( "Nome", "Ativo" )
+         VALUES ($1, $2)
          RETURNING *`,
         [
-          codSetor,
           setor.nome,
-          setor.descricao ?? null,
-          setor.andar ?? null,
           setor.ativo ?? true,
         ]
       );
@@ -47,43 +43,35 @@ async function insertSetor(setor = {}) {
 }
 
 // Get de setores
-async function selectSetor(codigo_setor) {
+async function selectSetor(nome) {
   let query =
     `SELECT * 
-    FROM setores`;
+    FROM "Setores"`;
 
   const params = [];
-  if (codigo_setor) {
-    query += ' WHERE setores.codigo_setor ILIKE $1';
-    params.push(`%${codigo_setor}%`);
+  if (nome) {
+    query += ' WHERE "Setores"."Nome" ILIKE $1';
+    params.push(`%${nome}%`);
   }
   const { rows } = await pool.query(query, params);
   return rows;
 }
 
-async function updateSetor(setor = {}) {
+async function updateSetor(setor) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    if (!setor.id) throw new Error('Código do setor obrigatório.');
-
-    const novoCodigo = setor.codigo_setor ?? null;
+    if (!setor.id) throw new Error('Id obrigatório.');
 
     const { rows } = await client.query(
-      `UPDATE setores
-         SET codigo_setor = COALESCE($2, codigo_setor),
-             nome         = COALESCE($3, nome),
-             descricao    = COALESCE($4, descricao),
-             andar        = COALESCE($5, andar),
-             ativo        = COALESCE($6, ativo)
-       WHERE id = $1
+      `UPDATE "Setores"
+         SET "Nome"         = COALESCE($2, "Nome"),
+             "Ativo"        = COALESCE($3, "Ativo")
+       WHERE "Id" = $1
        RETURNING *`,
       [
         setor.id,
-        novoCodigo,
         setor.nome ?? null,
-        setor.descricao ?? null,
-        setor.andar ?? null,
         setor.ativo ?? null
       ]
     );
@@ -109,8 +97,8 @@ async function removeSetor(id) {
     }
 
     const result = await client.query(
-      `DELETE FROM setores
-        WHERE id = $1
+      `DELETE FROM "Setores"
+        WHERE "Id" = $1
       RETURNING *`,
       [id]
     );
