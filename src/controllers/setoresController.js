@@ -2,17 +2,13 @@ const { insertSetor, selectSetor, updateSetor, removeSetor } = require('../servi
 
 async function postSetor(req, res) {
   try {
-    const { setor } = req.body;
-
-    const resultado = await insertSetor( setor );
-
+    const resultado = await insertSetor(req.body);
     if (resultado.warning) { 
       return res.status(200).json({
         message: resultado.warning,
         data: resultado
       });
     }
-
     return res.status(201).json({
       message: 'Setor criado com sucesso.',
       data: resultado
@@ -28,25 +24,24 @@ async function postSetor(req, res) {
 
 async function getSetor(req, res){
   try{
-    const { codigo_setor } = req.query;
-    const resultado = await selectSetor(codigo_setor);
-    if(!resultado) return res.status(404).json({message: "Setor não encontrado"});
-    return res.status(200).json(resultado)
+    const { nome } = req.query; 
+    const resultado = await selectSetor(nome);
+    if(!resultado) return res.status(404).json( {message: "Setor não encontrado"} );
+    return res.status(200).json( {message: "Setores encontrados:", data: resultado} )
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao buscar setor.', error: err.message});
+    return res.status(400).json( { message: 'Erro ao buscar setor.', error: err.message} );
   }
 }
 
 async function putSetor(req, res){
   try{
-    const { setor } = req.body;
-    const resultado = await updateSetor(setor)
-    if(!resultado) return res.status(404).json({message: "Setor não encontrado"});
-    return res.status(200).json( resultado )
+    const resultado = await updateSetor(req.body)
+    if(!resultado) return res.status(404).json( {message: "Setor não encontrado"} );
+    return res.status(200).json( {message: "Setores atualizados:", data: resultado} )
   } catch(err){
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao atualizar setor.', error: err.message})
+    return res.status(400).json( { message: 'Erro ao atualizar setor.', error: err.message} )
   }
 }
 
