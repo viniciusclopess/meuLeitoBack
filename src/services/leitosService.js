@@ -1,104 +1,78 @@
 // src/services/leitosService.js
 const { pool } = require('../db/pool');
 
-async function createLeito(leito = {}) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+async function createLeito({ Nome, IdSetor, Status, Descricao }) {
+  const cols = ['"Nome"', '"IdSetor"'];
+  const params = [Nome, IdSetor];
+  const ph = ['$1', '$2'];
 
-    if (!leito?.codigo_leito) {
-      throw new Error('codigo_leito é obrigatório.');
-    }
-
-    const codigoLeito = cleanCodigo(leito.codigo_leito);
-
-    // 1) Tenta achar leito por código
-    let jaExiste = await client.query(
-      'SELECT * FROM leitos WHERE codigo_leito = $1 LIMIT 1',
-      [codigoLeito]
-    );
-
-    if (jaExiste.rowCount > 0) {
-      await client.query('ROLLBACK');
-      return {
-        warning: 'Leito já cadastrado.',
-        leito: jaExiste.rows[0],
-      };
-    }
-
-    // 2) Cria leito
-    const inserido = await client.query(
-      `INSERT INTO leitos (codigo_leito, id_setor, id_paciente, status, descricao)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [
-        codigoLeito,
-        leito.id_setor,
-        leito.id_paciente ?? null,
-        leito.status ?? 'livre',
-        leito.descricao ?? null,
-      ]
-    );
-
-    await client.query('COMMIT');
-    return inserido.rows[0];
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
+  if (typeof Descricao !== 'undefined') {
+    cols.push('"Descricao"');
+    params.push(Descricao);
+    ph.push(`$${ph.length + 1}`);
   }
+
+  if (typeof Status !== 'undefined') {
+    cols.push('"Status"');
+    params.push(Status);
+    ph.push(`$${ph.length + 1}`);
+  }
+
+  const sql = `INSERT INTO "Leitos" (${cols.join(', ')})
+               VALUES (${ph.join(', ')})
+               RETURNING *;`;
+
+  const { rows } = await pool.query(sql, params);
+  return rows[0];
 }
 
-/**
- * Lê 1 leito pelo código
- */
-async function selectLeito(codigo_leito) {
-  let query = 'SELECT * FROM leitos';
+async function listLeitos({ nome, statuses = [] }) {
+  const where = [];
   const params = [];
-  if (codigo_leito) {
-    query += ' WHERE codigo_leito ILIKE $1';
-    params.push(`%${codigo_leito}%`);
+
+  if (nome) {
+    params.push(`%${nome}%`);
+    where.push(`"Nome" ILIKE $${params.length}`);
   }
-  const { rows } = await pool.query(query, params);
+
+  if (statuses.length) {
+    const base = params.length;
+    const ph = statuses.map((_, i) => `$${base + i + 1}`).join(', ');
+    where.push(`"Status" IN (${ph})`);
+    params.push(...statuses);
+  }
+
+  const sql = `
+    SELECT *
+    FROM "Leitos"
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY "Nome";
+  `;
+
+  const { rows } = await pool.query(sql, params);
   return rows;
 }
 
-async function updateLeito(leito = {}) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    if (!leito.id) throw new Error('Campos obrigatórios.');
-    
-    const { rows } = await client.query(
-      `UPDATE leitos
-         SET 
-            codigo_leito   =  COALESCE($2, codigo_leito),
-            id_setor       =  COALESCE($3, id_setor),
-            id_paciente    =  COALESCE($4, id_paciente),
-            status         =  COALESCE($5, status),
-            descricao      =  COALESVE($6, descricao)
-       WHERE id = $1
-       RETURNING *`,
-      [
-        leito.id, 
-        leito.codigo_leito, 
-        leito.id_setor,
-        leito.id_paciente,
-        leito.status,
-        leito.descricao
-      ]
-    );
+async function updateLeito(id, { Nome, Status, Ativo }) {
+  const sets = [];
+  const params = [];
+  let idx = 1;
 
-    await client.query('COMMIT');
-    if (rows.length === 0) return null;
-    return rows[0];
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+  if (typeof Nome !== 'undefined') { sets.push(`"Nome" = $${idx++}`); params.push(Nome); }
+  if (typeof Status !== 'undefined') { sets.push(`"Status" = $${idx++}`); params.push(Status); }
+  if (typeof Ativo !== 'undefined') { sets.push(`"Ativo" = $${idx++}`); params.push(Ativo); }
+
+  if (!sets.length) return null;
+
+  params.push(id);
+  const sql = `
+    UPDATE "Leitos"
+       SET ${sets.join(', ')}
+     WHERE "Id" = $${idx}
+     RETURNING *;
+  `;
+  const { rows } = await pool.query(sql, params);
+  return rows[0] || null;
 }
 
 async function removeLeito(id) {
@@ -137,7 +111,7 @@ async function removeLeito(id) {
 
 module.exports = {
   createLeito,
-  selectLeito,
+  listLeitos,
   updateLeito,
   removeLeito
 };

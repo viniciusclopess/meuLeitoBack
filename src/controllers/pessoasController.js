@@ -2,9 +2,8 @@ const { createPessoa, selectPessoa, updatePessoa, removePessoa } = require('../s
 
 async function postPessoa(req, res) {
   try {
-    const { pessoa } = req.body;
-    const resultado = await createPessoa(pessoa);
-    if (resultado.warning) { 
+    const resultado = await createPessoa(req.body);
+    if (resultado.warning) {
       return res.status(200).json({
         message: resultado.warning,
         data: resultado
@@ -27,7 +26,7 @@ async function getPessoa(req, res) {
   try {
     const { nome } = req.query;
     const resultado = await selectPessoa(nome);
-    if(!resultado) return res.status(404).json({message: "Pessoa não encontrada"});
+    if (!resultado) return res.status(404).json({ message: "Pessoa não encontrada" });
     return res.status(200).json(resultado);
   } catch (err) {
     console.error(err);
@@ -35,28 +34,28 @@ async function getPessoa(req, res) {
   }
 }
 
-async function putPessoa(req, res){
-  try{
+async function putPessoa(req, res) {
+  try {
     const { pessoa } = req.body;
     const resultado = await updatePessoa(pessoa)
 
-    if(!resultado) return res.status(404).json({message: "Pessoa não encontrada."});
-    return res.status(200).json({ data: resultado})
-  } catch(err){
+    if (!resultado) return res.status(404).json({ message: "Pessoa não encontrada." });
+    return res.status(200).json({ data: resultado })
+  } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao atualizar pessoa.', error: err.message})
+    return res.status(400).json({ message: 'Erro ao atualizar pessoa.', error: err.message })
   }
 }
 
-async function deletePessoa(req, res){
-  try{
-    const id  = Number(req.params.id);
+async function deletePessoa(req, res) {
+  try {
+    const id = Number(req.params.id);
     const resultado = await removePessoa(id)
-    if(!resultado) return res.status(404).json({message: "Pessoa não encontrada"});
+    if (!resultado) return res.status(404).json({ message: "Pessoa não encontrada" });
     return res.status(200).json(resultado)
-  } catch(err){
+  } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao deletar pessoa.', error: err.message})
+    return res.status(400).json({ message: 'Erro ao deletar pessoa.', error: err.message })
   }
 }
 
