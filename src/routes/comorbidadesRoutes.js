@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/', postComorbidade);
 router.get('/', getComorbidade);
-router.put('/', putComorbidade);
+router.put('/:id', putComorbidade);
 router.delete('/:id', deleteComorbidade);
 
 module.exports = router;
