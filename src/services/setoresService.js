@@ -57,12 +57,12 @@ async function selectSetor(nome) {
   return rows;
 }
 
-async function updateSetor(setor) {
+async function updateSetor(id, setor) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    if (!setor.id) throw new Error('Id obrigatório.');
-
+    if (!id) throw new Error('ID é obrigatório.');
+    
     const { rows } = await client.query(
       `UPDATE "Setores"
          SET "Nome"         = COALESCE($2, "Nome"),
@@ -70,7 +70,7 @@ async function updateSetor(setor) {
        WHERE "Id" = $1
        RETURNING *`,
       [
-        setor.id,
+        id,
         setor.nome ?? null,
         setor.ativo ?? null
       ]
@@ -91,10 +91,7 @@ async function removeSetor(id) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
-    if (!id || !Number.isInteger(id) || id <= 0) {
-      throw new Error('ID do setor inválido.');
-    }
+    if (!id) throw new Error('ID do setor inválido.');
 
     const result = await client.query(
       `DELETE FROM "Setores"

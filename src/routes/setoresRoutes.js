@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/', postSetor);
 router.get('/', getSetor);
-router.put('/', putSetor);
+router.put('/:id', putSetor);
 router.delete('/:id', deleteSetor);
 
 module.exports = router;

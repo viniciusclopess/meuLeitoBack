@@ -36,7 +36,8 @@ async function getSetor(req, res){
 
 async function putSetor(req, res){
   try{
-    const resultado = await updateSetor(req.body)
+    const { id }  = req.params;
+    const resultado = await updateSetor(id, req.body)
     if(!resultado) return res.status(404).json( {message: "Setor não encontrado"} );
     return res.status(200).json( {message: "Setores atualizados:", data: resultado} )
   } catch(err){
@@ -47,7 +48,7 @@ async function putSetor(req, res){
 
 async function deleteSetor(req, res){
   try{
-    const id  = Number(req.params.id);
+    const { id }  = req.params;
     const resultado = await removeSetor(id)
     if(!resultado) return res.status(404).json({message: "Setor não encontrado"});
 

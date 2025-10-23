@@ -89,9 +89,7 @@ async function removeComorbidade(id) {
   try {
     await client.query('BEGIN');
 
-    if (!id || !Number.isInteger(id) || id <= 0) {
-      throw new Error('ID da comorbidade inválido.');
-    }
+    if (!id) throw new Error('ID da comorbidade inválido.');
 
     const result = await client.query(
       `DELETE FROM "Comorbidades"
