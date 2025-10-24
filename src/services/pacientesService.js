@@ -2,81 +2,52 @@ const { pool } = require('../db/pool');
 
 const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
 
-async function insertPaciente(paciente = {}) {
+async function insertPaciente(paciente) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    if (!paciente?.cpf) {
+    if (!paciente?.cpf || !paciente?.nome || !paciente?.nascimento || !paciente?.sexo) {
       throw new Error('Campos obrigatórios!');
     }
 
     // Ajeitar CPF
     const cpfLimpo = cleanCpf(paciente.cpf)
 
-    // 1) Buscar pessoa por CPF
-    const rPessoa = await client.query(
-      'SELECT id FROM pessoas WHERE cpf = $1',
+    // 1) Buscar paciente por CPF
+    const rPaciente = await client.query(
+      'SELECT "Id" FROM "Pacientes" WHERE "Cpf" = $1',
       [cpfLimpo]
     );
-
-    let pessoaId;
-    // Não achou = Cria
-    if (rPessoa.rowCount === 0) {
-      const r = await client.query(
-        `INSERT INTO pessoas (cpf, nome, nascimento, telefone, sexo, estado_civil, naturalidade, nacionalidade, uf, endereco, email )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id`,
-        [
-          cpfLimpo,
-          paciente.nome,
-          paciente.nascimento,
-          paciente.telefone ?? null,
-          paciente.sexo,
-          paciente.estado_civil ?? null,
-          paciente.naturalidade ?? null, 
-          paciente.nacionalidade ?? null, 
-          paciente.uf ?? null,
-          paciente.endereco ?? null,
-          paciente.email ?? null
-        ]
-      );
-      pessoaId = r.rows[0].id;
-    } else {
-      pessoaId = rPessoa.rows[0].id;
-    }
-
-    // 2) Já é paciente?
-    const jaExiste = await client.query(
-      'SELECT id FROM pacientes WHERE id_pessoa = $1',
-      [pessoaId]
-    );
-    if (jaExiste.rowCount > 0) {
+    if (rPaciente.rowCount > 0) {
       await client.query('ROLLBACK');
       return {
-        warning: 'Pessoa já possui cadastro de paciente.',
-        pessoa_id: pessoaId,
-        pac_id: jaExiste.rows[0].id
+        warning: 'Esse paciente já foi cadastrado anteriormente!',
+        pacienteId: rPaciente.rows[0].Id
       };
-    }    
+    }
 
-    // 4) Inserir paciente
-    const rPaciente = await client.query(
-      `INSERT INTO pacientes (id_pessoa, alergias, comorbidades, prontuario, observacao, rotinas)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+    const rNovo = await client.query(
+      `INSERT INTO "Pacientes" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Altura", "Peso", "TipoSanguineo", "Rotina")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING "Id"`,
       [
-        pessoaId,
-        paciente.alergias ?? null,
-        paciente.comorbidades ?? null,
-        paciente.prontuario ?? null,
-        paciente.observacao ?? null,
-        paciente.rotinas ?? null
+        cpfLimpo,
+        paciente.nome,
+        paciente.nascimento,
+        paciente.sexo,
+        paciente.telefone ?? null,
+        paciente.altura ?? null,
+        paciente.peso ?? null,
+        paciente.tipo_sanguineo ?? null,
+        paciente.rotina ?? null
       ]
     );
-
     await client.query('COMMIT');
-    return rPaciente.rows[0];
+    return{
+      ok: true,
+      pacienteId: rNovo.rows[0].Id
+    } 
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -85,57 +56,53 @@ async function insertPaciente(paciente = {}) {
   }
 }
 
-// Get de pacientes
 async function selectPaciente(nome) {
   let query = 
   `SELECT 
-      pac.id              AS id_paciente,
-      p.id                AS id_pessoa,
-      p.nome              AS nome,
-      p.cpf               AS cpf,
-      p.sexo              AS sexo,
-      p.nascimento        AS nascimento,
-      p.telefone          AS telefone,
-      p.estado_civil      AS estado_civil,
-      p.naturalidade      AS naturalidade,
-      p.nacionalidade     AS nacionalidade,
-      p.uf                AS uf,
-      p.endereco          AS endereco,
-      p.email             AS email,
-      pac.rotinas         AS rotinas,
-      pac.alergias        AS alergias,
-      pac.comorbidades    AS comorbidades,
-      pac.prontuario      AS prontuario,
-      pac.observacao      AS observacao
-      FROM pacientes pac
-    INNER JOIN pessoas p ON p.id = pac.id_pessoa`;
+      *
+    FROM "Pacientes"`;
   const params = [];
   if (nome) {
-    query += ' WHERE p.nome ILIKE $1';
+    query += ' WHERE "Pacientes"."Nome" ILIKE $1';
     params.push(`%${nome}%`);
   }
   const { rows } = await pool.query(query, params);
   return rows;
 }
 
-async function updatePaciente(paciente = {}) {
+async function updatePaciente(id, paciente) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     
-    if (!paciente.id) throw new Error('Id obrigatório.');
+    if (!id) throw new Error('Id do paciente é obrigatório.');
 
     const { rows } = await client.query(
-      `UPDATE pacientes
+      `UPDATE "Pacientes"
         SET 
-          alergias        =  COALESCE($2, alergias),
-          comorbidades    =  COALESCE($3, comorbidades),
-          prontuario      =  COALESCE($4, prontuario),
-          observacao      =  COALESCE($5, observacao),
-          rotinas         =  COALESCE($6, rotinas)
-        WHERE id = $1
+          "Cpf"             =  COALESCE($2, "Cpf"),
+          "Nome"            =  COALESCE($3, "Nome"),
+          "Nascimento"      =  COALESCE($4, "Nascimento"),
+          "Sexo"            =  COALESCE($5, "Sexo"),
+          "Telefone"        =  COALESCE($6, "Telefone"),
+          "Altura"          =  COALESCE($7, "Altura"),
+          "Peso"            =  COALESCE($8, "Peso"),
+          "TipoSanguineo"   =  COALESCE($9, "TipoSanguineo"),
+          "Rotina"          =  COALESCE($10, "Rotina")
+        WHERE "Id" = $1
       RETURNING *`,
-      [paciente.id, paciente.alergias, paciente.comorbidades, paciente.prontuario, paciente.observacao, paciente.rotinas]
+      [
+        id, 
+        paciente.cpf, 
+        paciente.nome, 
+        paciente.nascimento, 
+        paciente.sexo, 
+        paciente.telefone,
+        paciente.altura,
+        paciente.peso,
+        paciente.tipo_sanguineo,
+        paciente.rotina
+      ]
     );
 
     await client.query('COMMIT');
@@ -157,8 +124,8 @@ async function removePaciente(id) {
     if (!id) throw new Error('ID do paciente é obrigatório.');
 
     const result = await client.query(
-      `DELETE FROM pacientes 
-       WHERE id = $1
+      `DELETE FROM "Pacientes" 
+       WHERE "Id" = $1
        RETURNING *`,
       [id]
     );
@@ -170,11 +137,9 @@ async function removePaciente(id) {
   } catch (err) {
     await client.query('ROLLBACK');
 
-    // Tratamento para violação de integridade (FK)
+    // 23503 = violação de chave estrangeira (há registros dependentes)
     if (err.code === '23503') {
-      throw new Error(
-        'Não foi possível excluir: há registros relacionados a esta enfermeira.'
-      );
+      throw new Error('Não foi possível excluir: há registros relacionados a este paciente.');
     }
 
     throw err;
