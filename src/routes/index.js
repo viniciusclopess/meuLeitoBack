@@ -4,14 +4,15 @@ const router = express.Router();
 const pool = require('../db/pool');
 
 // sub-routers por domínio
-const pacientes     = require('./pacientesRoutes');
-const leitos        = require('./leitosRoutes');
-const setores       = require('./setoresRoutes')
-const chamados      = require('./chamadosRoutes')
-const login         = require('./authRoutes')
-const comorbidades  = require('./comorbidadesRoutes')
-const alergias      = require('./alergiasRoutes')
-const perfis        = require('./perfisRoutes')
+const pacientes       = require('./pacientesRoutes');
+const leitos          = require('./leitosRoutes');
+const setores         = require('./setoresRoutes')
+const chamados        = require('./chamadosRoutes')
+const login           = require('./authRoutes')
+const comorbidades    = require('./comorbidadesRoutes')
+const alergias        = require('./alergiasRoutes')
+const perfis          = require('./perfisRoutes')
+const profissionais   = require('./profissionaisRoutes')
 
 router.use('/pacientes',        pacientes);
 router.use('/leitos',           leitos);
@@ -21,6 +22,7 @@ router.use('/login',            login);
 router.use('/comorbidades',     comorbidades);
 router.use('/alergias',         alergias);
 router.use('/perfis',           perfis);
+router.use('/profissionais',    profissionais);
 
 router.get('/health', (_req, res) => res.json({ ok: true }));
 
