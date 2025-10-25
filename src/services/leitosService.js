@@ -26,32 +26,52 @@ async function createLeito({ Nome, IdSetor, Status, Descricao }) {
   return rows[0];
 }
 
-async function listLeitos({ nome, statuses = [] }) {
+async function listLeitos({ nome, statuses = [], idSetor, ativo }) {
   const where = [];
   const params = [];
 
   if (nome) {
     params.push(`%${nome}%`);
-    where.push(`"Nome" ILIKE $${params.length}`);
+    where.push(`l."Nome" ILIKE $${params.length}`);
   }
 
   if (statuses.length) {
     const base = params.length;
     const ph = statuses.map((_, i) => `$${base + i + 1}`).join(', ');
-    where.push(`"Status" IN (${ph})`);
+    where.push(`l."Status" IN (${ph})`);
     params.push(...statuses);
   }
 
+  if (idSetor) {
+    params.push(idSetor);
+    where.push(`l."IdSetor" = $${params.length}`);
+  }
+
+  if (typeof ativo === 'boolean') {
+    params.push(ativo);
+    where.push(`l."Ativo" = $${params.length}`);
+  }
+
   const sql = `
-    SELECT *
-    FROM "Leitos"
+    SELECT 
+      l."Id",
+      l."Nome",
+      l."Descricao",
+      l."IdSetor",
+      s."Nome" AS "SetorNome",
+      l."Status",
+      l."Ativo"
+    FROM "Leitos" l
+    INNER JOIN "Setores" s
+      ON l."IdSetor" = s."Id"
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-    ORDER BY "Nome";
+    ORDER BY l."Nome";
   `;
 
   const { rows } = await pool.query(sql, params);
   return rows;
 }
+
 
 async function updateLeito(id, { Nome, Status, Ativo }) {
   const sets = [];

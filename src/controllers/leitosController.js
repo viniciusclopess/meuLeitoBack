@@ -37,22 +37,33 @@ async function postLeito(req, res) {
   }
 }
 
-async function getLeito(req, res) {
-  try {
-    const { nome, status } = req.query;
 
-    // Normaliza "status" para array (aceita ?status=...&status=... ou ?status=...)
+async function getLeitos(req, res) {
+  try {
+    const { nome, status, idSetor, ativo } = req.query;
+
     const statuses = Array.isArray(status) ? status : status ? [status] : [];
 
-    // Validação opcional de status
     if (statuses.some(s => !STATUS_PERMITIDOS.includes(s))) {
       return res.status(400).json({
         message: `Status inválido. Use um de: ${STATUS_PERMITIDOS.join(', ')}`
       });
     }
 
-    const data = await listLeitos({ nome, statuses });
+    if (idSetor && isNaN(Number(idSetor))) {
+      return res.status(400).json({ message: 'idSetor deve ser numérico.' });
+    }
+
+    let ativoBool = undefined;
+    if (typeof ativo !== 'undefined') {
+      if (ativo === 'true' || ativo === true) ativoBool = true;
+      else if (ativo === 'false' || ativo === false) ativoBool = false;
+      else return res.status(400).json({ message: 'ativo deve ser true ou false.' });
+    }
+
+    const data = await listLeitos({ nome, statuses, idSetor, ativo: ativoBool });
     return res.status(200).json({ data });
+
   } catch (err) {
     console.error('[GET /leitos] erro:', err);
     return res.status(500).json({ message: 'Erro ao listar leitos.', error: err.message });
@@ -62,8 +73,6 @@ async function getLeito(req, res) {
 
 async function putLeito(req, res) {
   try {
-    console.log('req.params:', req.params);
-    console.log('req.body:', req.body);
     const { id } = req.params;
     const { Nome, Status, Ativo } = req.body ?? {};
 
@@ -109,4 +118,4 @@ async function deleteLeito(req, res) {
   }
 }
 
-module.exports = { postLeito, getLeito, putLeito, deleteLeito };
+module.exports = { postLeito, getLeitos, putLeito, deleteLeito };
