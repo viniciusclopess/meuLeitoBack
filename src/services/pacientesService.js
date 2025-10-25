@@ -46,7 +46,7 @@ async function insertPaciente(paciente) {
     await client.query('COMMIT');
     return{
       ok: true,
-      pacienteId: rNovo.rows[0].Id
+      paciente: rNovo.rows[0]
     } 
   } catch (err) {
     await client.query('ROLLBACK');
@@ -93,15 +93,15 @@ async function updatePaciente(id, paciente) {
       RETURNING *`,
       [
         id, 
-        paciente.cpf, 
-        paciente.nome, 
-        paciente.nascimento, 
-        paciente.sexo, 
-        paciente.telefone,
-        paciente.altura,
-        paciente.peso,
-        paciente.tipo_sanguineo,
-        paciente.rotina
+        paciente.cpf ?? null, 
+        paciente.nome ?? null, 
+        paciente.nascimento ?? null, 
+        paciente.sexo ?? null, 
+        paciente.telefone ?? null,
+        paciente.altura ?? null,
+        paciente.peso ?? null,
+        paciente.tipo_sanguineo ?? null,
+        paciente.rotina ?? null
       ]
     );
 
