@@ -1,47 +1,44 @@
 // src/services/leitosService.js
 const { pool } = require('../db/pool');
 
-async function createLeito(leito = {}) {
+async function insertLeito(leito) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    if (!leito?.codigo_leito) {
-      throw new Error('codigo_leito é obrigatório.');
+    if (!leito?.nome) {
+      throw new Error('Nome do leito é obrigatório.');
     }
 
-    const codigoLeito = cleanCodigo(leito.codigo_leito);
-
     // 1) Tenta achar leito por código
-    let jaExiste = await client.query(
-      'SELECT * FROM leitos WHERE codigo_leito = $1 LIMIT 1',
-      [codigoLeito]
+    const rLeito = await client.query(
+      'SELECT * FROM "Leitos" WHERE "Nome" = $1 LIMIT 1',
+      [leito.nome]
     );
 
-    if (jaExiste.rowCount > 0) {
+    if (rLeito.rowCount > 0) {
       await client.query('ROLLBACK');
       return {
         warning: 'Leito já cadastrado.',
-        leito: jaExiste.rows[0],
+        leitoId: rLeito.rows[0],
       };
     }
 
     // 2) Cria leito
-    const inserido = await client.query(
-      `INSERT INTO leitos (codigo_leito, id_setor, id_paciente, status, descricao)
-       VALUES ($1, $2, $3, $4, $5)
+    const rNovo = await client.query(
+      `INSERT INTO "Leitos" ("Nome", "IdSetor", "Status", "Descricao")
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [
-        codigoLeito,
+        leito.nome,
         leito.id_setor,
-        leito.id_paciente ?? null,
-        leito.status ?? 'livre',
-        leito.descricao ?? null,
+        leito.status ?? "Livre",
+        leito.descricao ?? null
       ]
     );
 
     await client.query('COMMIT');
-    return inserido.rows[0];
+    return rNovo.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -53,40 +50,38 @@ async function createLeito(leito = {}) {
 /**
  * Lê 1 leito pelo código
  */
-async function selectLeito(codigo_leito) {
-  let query = 'SELECT * FROM leitos';
+async function selectLeito(nome) {
+  let query = 'SELECT * FROM "Leitos"';
   const params = [];
-  if (codigo_leito) {
-    query += ' WHERE codigo_leito ILIKE $1';
-    params.push(`%${codigo_leito}%`);
+  if (nome) {
+    query += ' WHERE "Nome" ILIKE $1';
+    params.push(`%${nome}%`);
   }
   const { rows } = await pool.query(query, params);
   return rows;
 }
 
-async function updateLeito(leito = {}) {
+async function updateLeito(id, leito) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    if (!leito.id) throw new Error('Campos obrigatórios.');
+    if (!id) throw new Error('Campos obrigatórios.');
     
     const { rows } = await client.query(
-      `UPDATE leitos
+      `UPDATE "Leitos"
          SET 
-            codigo_leito   =  COALESCE($2, codigo_leito),
-            id_setor       =  COALESCE($3, id_setor),
-            id_paciente    =  COALESCE($4, id_paciente),
-            status         =  COALESCE($5, status),
-            descricao      =  COALESVE($6, descricao)
-       WHERE id = $1
+            "Nome"          =  COALESCE($2, "Nome"),
+            "IdSetor"       =  COALESCE($3, "IdSetor"),
+            "Status"        =  COALESCE($4, "Status"),
+            "Descricao"     =  COALESCE($5, "Descricao")
+       WHERE "Id" = $1
        RETURNING *`,
       [
-        leito.id, 
-        leito.codigo_leito, 
-        leito.id_setor,
-        leito.id_paciente,
-        leito.status,
-        leito.descricao
+        id, 
+        leito.nome ?? null, 
+        leito.id_setor ?? null,
+        leito.status ?? null,
+        leito.descricao ?? null
       ]
     );
 
@@ -108,17 +103,17 @@ async function removeLeito(id) {
 
     if (!id) throw new Error('ID do leito é obrigatório.');
 
-    const result = await client.query(
-      `DELETE FROM leitos 
-       WHERE id = $1
+    const rDeletado = await client.query(
+      `DELETE FROM "Leitos" 
+       WHERE "Id" = $1
        RETURNING *`,
       [id]
     );
 
     await client.query('COMMIT');
 
-    if (result.rowCount === 0) return null;
-    return result.rows[0];
+    if (rDeletado.rowCount === 0) return null;
+    return rDeletado.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
 
@@ -136,7 +131,7 @@ async function removeLeito(id) {
 }
 
 module.exports = {
-  createLeito,
+  insertLeito,
   selectLeito,
   updateLeito,
   removeLeito
