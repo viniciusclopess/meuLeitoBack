@@ -1,22 +1,26 @@
-const { createLeito, selectLeito, updateLeito, removeLeito } = require('../services/leitosService');
+const { insertLeito, selectLeito, updateLeito, removeLeito } = require('../services/leitosService');
 
 async function postLeito(req, res) {
   try {
-    const { leito } = req.body;
-    const resultado = await createLeito(leito);
+    const resultado = await insertLeito(req.body);
     if (resultado.warning) {
-      return res.status(200).json({
+      return res.status(409).json({
+        ok: false,
         message: resultado.warning,
-        data: resultado
+        data: {
+          leitoId: resultado.leitoId
+        }
       });
     }
     return res.status(201).json({
+      ok: true,
       message: 'Leito criado com sucesso.',
       data: resultado
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
+      ok: false,
       message: 'Erro ao criar leito.',
       error: err.message
     });
@@ -25,40 +29,62 @@ async function postLeito(req, res) {
 
 async function getLeito(req, res){
   try{
-    const { codigo_leito } = req.query;
-    const resultado = await selectLeito(codigo_leito);
-
-    if(!resultado) return res.status(404).json({message: "Leito não encontrado"});
-    return res.status(200).json( resultado )
+    const { nome } = req.query;
+    const resultado = await selectLeito(nome);
+    if(!resultado) return res.status(404).json({
+      message: "Leito não encontrado"
+    });
+    return res.status(200).json({
+      message: "Leitos encontrados:", 
+      data: resultado
+    })
   } catch (err) {
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao buscar leito.', error: err.message});
+    return res.status(400).json({ 
+        message: 'Erro ao buscar leito.', 
+        error: err.message
+      });
   }
 }
 
 async function putLeito(req, res){
   try{
-    const { leito } = req.body;
-    const resultado = await updateLeito( leito )
-
-    if(!resultado) return res.status(404).json({message: "Leito não encontrado."});
-    return res.status(200).json( resultado )
+    const { id } = req.params;
+    const resultado = await updateLeito( id, req.body )
+    if(!resultado) return res.status(404).json({
+      message: "Leito não encontrado"
+    });
+    return res.status(200).json({
+      message: "Leitos atualizados:", 
+      data: resultado
+    })
   } catch(err){
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao atualizar leito.', error: err.message})
+    return res.status(400).json({ 
+      message: 'Erro ao atualizar leito.', 
+      error: err.message
+    })
   }
 }
 
 async function deleteLeito(req, res){
   try{
-    const id  = Number(req.params.id);
+    const { id } = req.params;
     const resultado = await removeLeito(id)
-    if(!resultado) return res.status(404).json({message: "Leito não encontrado."});
-    return res.status(200).json(resultado)
+    if(!resultado) return res.status(404).json({
+      message: "Leito não encontrado"
+    });
+    return res.status(200).json({
+      message: "Leitos removidos:", 
+      data: resultado
+    })
   } catch(err){
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao deletar leito.', error: err.message})
+    return res.status(400).json({
+      message: 'Erro ao deletar leito.',
+      error: err.message
+    })
   }
 }
 
-module.exports = { postLeito, getLeito, putLeito, deleteLeito  };
+module.exports = { postLeito, getLeito, putLeito, deleteLeito };
