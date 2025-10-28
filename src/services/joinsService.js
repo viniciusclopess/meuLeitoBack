@@ -1,11 +1,13 @@
 const { pool } = require('../db/pool');
 
-async function insertPacienteLeito(id_paciente, id_leito){
+async function insertPacienteLeito(alocacao) {
   const client = await pool.connect();
-  try{
+  try {
     await client.query('BEGIN');
 
-    if(!id_paciente || !id_leito) throw new Error('Campos obrigatórios.')
+    if (!alocacao?.id_paciente || !alocacao?.id_leito) {
+      throw new Error('Campos obrigatórios.');
+    }
 
     const rVerificacao = await client.query(
       `
@@ -14,110 +16,167 @@ async function insertPacienteLeito(id_paciente, id_leito){
         "Status"
       FROM "Leitos"
       WHERE
-      "Id" = $1, 
-      "Status" = <> 'Livre'
-      `
-      [
-        id_leito
-      ]
-    )
-    if(rVerificacao.rowCount > 0){
+        "Id" = $1
+        AND "Status" = 'Livre'
+      `,
+      [alocacao.id_leito]
+    );
+
+    if (rVerificacao.rowCount === 0) {
       await client.query('ROLLBACK');
       return {
-        warning: 'Esse leito está indisponível!',
-        pacienteLeitoId: rVerificacao.rows[0].Id
+        ok: false,
+        warning: 'Esse leito está indisponível.'
       };
     }
+
     const rNovo = await client.query(
-        `INSERT INTO "PacienteLeito" ("IdPaciente", "IdLeito")
-        VALUES ($1, $2)
-        RETURNING "Id"`,
-        [
-          id_paciente,
-          id_leito
-        ]
+      `
+      INSERT INTO "PacienteLeito" ("IdPaciente", "IdLeito")
+      VALUES ($1, $2)
+      RETURNING "Id", "IdPaciente", "IdLeito"
+      `,
+      [
+        alocacao.id_paciente,
+        alocacao.id_leito
+      ]
     );
+
+    // 4. marcar o leito como Ocupado
+    await client.query(
+      `
+      UPDATE "Leitos"
+      SET "Status" = 'Ocupado'
+      WHERE "Id" = $1
+      `,
+      [alocacao.id_leito]
+    );
+
+    // 5. commit final
     await client.query('COMMIT');
-    return{
+
+    return {
       ok: true,
       pacienteLeito: rNovo.rows[0]
-    } 
+    };
+
   } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
+    await client.query('ROLLBACK');
+    console.error('Erro em alocacao:', err.message);
+    throw err;
   } finally {
-      client.release();
+    client.release();
   }
 }
+
 
 
 async function selectPacienteLeito(nome) {
   let query = 
   `SELECT 
-      "Pacientes"."Nome",
-      "Leitos"."Nome",
+      "Pacientes"."Nome" AS "NomePaciente",
+      "Leitos"."Nome" AS "NomeLeito",
       "PacienteLeito"."DataEntrada",
       "PacienteLeito"."DataSaida"
     FROM "PacienteLeito"
     INNER JOIN "Pacientes" 
       ON "PacienteLeito"."IdPaciente" = "Pacientes"."Id"
-    INNER JOIN 
+    INNER JOIN "Leitos"
       ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
     `;
   const params = [];
   if (nome) {
     query += 
     ` WHERE 
-        "PacienteLeito"."IdPaciente" = "Pacientes"."Id",
-        "PacienteLeito"."IdLeito"    = "Leitos"."Id",
-        "Pacientes"."Nome"           ILIKE $1,
-        "Leitos"."Status"            = 'Ocupado';                  
+        "PacienteLeito"."IdPaciente"      = "Pacientes"."Id"
+        AND "PacienteLeito"."IdLeito"     = "Leitos"."Id" 
+        AND "Pacientes"."Nome"            ILIKE $1
+        AND "Leitos"."Status"             = 'Ocupado'
+        AND "PacienteLeito"."DataSaida"   IS NULL                  
     `;
     params.push(`%${nome}%`);
   }
-  const { rSelectLeitosOcupados } = await pool.query(query, params);
-  return rSelectLeitosOcupados;
+  const { rows } = await pool.query(query, params);
+  return rows;
 }
 
-async function updatePacienteLeito(id, paciente_leito) {
+async function updatePacienteLeito(id, alocacao) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     if (!id) throw new Error('Id é obrigatório.');
 
-    const { rUpdate } = await client.query(
-      `UPDATE "PacienteLeito"
-        SET 
-          "IdPaciente"        = COALESCE($2, "PacienteLeito"."IdPaciente"),
-          "IdLeito"           = COALESCE($3, "PacienteLeito"."IdLeito"),
-          "DataEntrada"       = COALESCE($4, "PacienteLeito"."DataEntrada"),
-          "DataSaida"         = COALESCE($5, "PacienteLeito"."DataSaida"),
-          "Leitos"."Status"   = COALESCE($6, "Leitos"."Status")
-        FROM "Leitos"
-        WHERE
-          "PacienteLeito"."IdLeito" = "Leitos"."Id"
-          AND "PacienteLeito"."Id" = $1
-        RETURNING 
-          "PacienteLeito"."Id",
-          "PacienteLeito"."IdPaciente",
-          "PacienteLeito"."IdLeito",
-          "PacienteLeito"."DataEntrada",
-          "PacienteLeito"."DataSaida",
-          "Leitos"."Status";
-      `
-      [
-        id, 
-        paciente_leito.id_paciente ?? null, 
-        paciente_leito.id_leito ?? null, 
-        paciente_leito.data_entrada ?? null, 
-        paciente_leito.data_saida ?? null
-      ]
-    );
+    const rUpdateAlocacao = `
+      UPDATE "PacienteLeito"
+      SET 
+        "IdPaciente"  = COALESCE($2, "PacienteLeito"."IdPaciente"),
+        "IdLeito"     = COALESCE($3, "PacienteLeito"."IdLeito"),
+        "DataEntrada" = COALESCE($4, "PacienteLeito"."DataEntrada"),
+        "DataSaida"   = COALESCE($5, "PacienteLeito"."DataSaida")
+      WHERE "PacienteLeito"."Id" = $1
+      RETURNING 
+        "Id",
+        "IdPaciente",
+        "IdLeito",
+        "DataEntrada",
+        "DataSaida"
+    `;
+
+    const paramsAlocacao = [
+      id,
+      alocacao.id_paciente ?? null,
+      alocacao.id_leito ?? null,
+      alocacao.data_entrada ?? null,
+      alocacao.data_saida ?? null
+    ];
+
+    const { rows: alocacaoRows } = await client.query(rUpdateAlocacao, paramsAlocacao);
+
+    if (alocacaoRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const leitoFinalId = alocacaoRows[0].IdLeito;
+
+    if (alocacao.status != null) {
+      const rUpdateLeito = `
+        UPDATE "Leitos"
+        SET "Status" = $2
+        WHERE "Id" = $1
+        RETURNING "Id", "Nome", "Status"
+      `;
+
+      const paramsLeito = [
+        leitoFinalId,
+        alocacao.status
+      ];
+
+      await client.query(rUpdateLeito, paramsLeito);
+    }
+
+    const selectSQL = `
+      SELECT 
+        "PacienteLeito"."Id"            AS "AlocacaoId",
+        "Pacientes"."Nome"              AS "PacienteNome",
+        "Leitos"."Nome"                 AS "LeitoNome",
+        "Leitos"."Status"               AS "LeitoStatus",
+        "PacienteLeito"."DataEntrada",
+        "PacienteLeito"."DataSaida"
+      FROM "PacienteLeito"
+      INNER JOIN "Pacientes"
+        ON "PacienteLeito"."IdPaciente" = "Pacientes"."Id"
+      INNER JOIN "Leitos"
+        ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
+      WHERE "PacienteLeito"."Id" = $1
+    `;
+
+    const { rows: finalRows } = await client.query(selectSQL, [id]);
 
     await client.query('COMMIT');
-    if (rUpdate.length === 0) return null;
-    return rUpdate[0];
+    return finalRows[0];
+
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

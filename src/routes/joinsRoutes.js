@@ -3,8 +3,8 @@ const { postPacienteLeito, getPacienteLeito, putPacienteLeito } = require('../co
 
 const router = express.Router();
 
-router.post('/atendimento/', postPacienteLeito);
-router.get('/atendimento/', getPacienteLeito);
-router.put('atendimento/:id', putPacienteLeito);
+router.post('/alocacao/', postPacienteLeito);
+router.get('/alocacao/', getPacienteLeito);
+router.put('/alocacao/:id', putPacienteLeito);
 
 module.exports = router;

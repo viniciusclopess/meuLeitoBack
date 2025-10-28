@@ -13,6 +13,7 @@ const comorbidades    = require('./comorbidadesRoutes')
 const alergias        = require('./alergiasRoutes')
 const perfis          = require('./perfisRoutes')
 const profissionais   = require('./profissionaisRoutes')
+const joins           = require('./joinsRoutes')
 
 router.use('/pacientes',        pacientes);
 router.use('/leitos',           leitos);
@@ -23,6 +24,7 @@ router.use('/comorbidades',     comorbidades);
 router.use('/alergias',         alergias);
 router.use('/perfis',           perfis);
 router.use('/profissionais',    profissionais);
+router.use('/joins',            joins);
 
 router.get('/health', (_req, res) => res.json({ ok: true }));
 

@@ -6,15 +6,12 @@ async function postPacienteLeito(req, res) {
     if (resultado.warning) {
       return res.status(409).json({
         ok: false,
-        message: resultado.warning,
-        data: {
-          pacienteLeitoId: resultado.pacienteId
-        }
+        message: resultado.warning
       });
     }
     return res.status(201).json({
       ok: true,
-      message: 'Atendimento criado com sucesso.',
+      message: 'Alocação criada com sucesso.',
       data: resultado
     });
   } catch (err) {
@@ -32,10 +29,10 @@ async function getPacienteLeito(req, res){
     const { nome } = req.query;
     const resultado = await selectPacienteLeito(nome);
     if(!resultado) return res.status(404).json({
-      message: "Atendimento não encontrado"
+      message: "Alocação não encontrada."
     });
     return res.status(200).json({
-      message: "Atendimentos encontrados:", 
+      message: "Alocações encontradas:", 
       data: resultado
     })
   } catch (err) {
@@ -52,10 +49,10 @@ async function putPacienteLeito(req, res){
     const { id } = req.params;
     const resultado = await updatePacienteLeito( id, req.body )
     if(!resultado) return res.status(404).json({
-      message: "Atendimento não encontrado"
+      message: "Alocação não encontrada."
     });
     return res.status(200).json({
-      message: "Atendimentos atualizados:", 
+      message: "Alocações atualizados:", 
       data: resultado
     })
   } catch(err){
