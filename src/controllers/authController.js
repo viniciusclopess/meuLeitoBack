@@ -1,49 +1,73 @@
-// src/controllers/authController.js
 const jwt = require('jsonwebtoken');
 const { findUserLogin, verifyPassword } = require('../services/authService');
 
-function signJwt(payload) {
-  return jwt.sign(
-    payload,
-    process.env.JWT_SECRET || 'secret',
-    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
-  );
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
 async function fazerLogin(req, res) {
   try {
-    const { login, senha } = req.body;
+    const { cpf, senha } = req.body;
 
-    if (!login || !senha) {
-      return res.status(400).json({ ok: false, message: 'Login e senha são obrigatórios.' });
-    }
+    // 1) Buscar usuário no banco
+    const user = await findUserLogin(cpf);
 
-    const user = await findUserLogin(login);
     if (!user) {
-      return res.status(401).json({ ok: false, message: 'Usuário não encontrado.' });
+      return res.status(401).json({
+        ok: false,
+        message: 'CPF ou senha inválidos.'
+      });
     }
 
-    const ok = await verifyPassword(senha, user.senha_hash);
-    if (!ok) {
-      return res.status(401).json({ ok: false, message: 'Senha incorreta.' });
+    if (!user.ativo) {
+      return res.status(403).json({
+        ok: false,
+        message: 'Usuário inativo.'
+      });
     }
 
-    const token = signJwt({ id: user.id, login: user.login, role: user.role});
+    // 2) Validar senha
+    const senhaValida = await verifyPassword(senha, user.senha);
+    if (!senhaValida) {
+      return res.status(401).json({
+        ok: false,
+        message: 'CPF ou senha inválidos.'
+      });
+    }
 
-    return res.json({
+    // 3) Montar payload do token
+    const payload = {
+      sub: user.id,                // subject = id do usuário
+      cpf: user.cpf,
+      permissoes: user.permissoes, // array de permissões
+    };
+
+    // 4) Gerar token
+    const token = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    // 5) Resposta
+    return res.status(200).json({
       ok: true,
-      message: 'Login bem-sucedido!',
+      message: 'Login efetuado com sucesso.',
       token,
       usuario: {
         id: user.id,
-        login: user.login,
-        role: user.role
+        cpf: user.cpf,
+        permissoes: user.permissoes,
       }
     });
+
   } catch (err) {
-    console.error('[AUTH] login error:', err);
-    return res.status(500).json({ ok: false, message: 'Erro interno', error: err.message });
+    console.error('Erro no login:', err);
+    return res.status(500).json({
+      ok: false,
+      message: 'Erro interno ao autenticar.',
+      error: err.message
+    });
   }
 }
 
-module.exports = { fazerLogin };
+module.exports = {
+  fazerLogin
+};
