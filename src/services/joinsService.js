@@ -494,6 +494,7 @@ async function removeProfissionaisSetores(id) {
     client.release();
   }
 }
+
 //==================================================================================================================================
 //==================================================================================================================================
 
@@ -674,10 +675,189 @@ async function removePacienteAlergia(id) {
   }
 }
 
+//==================================================================================================================================
+//==================================================================================================================================
+
+async function insertPacienteComorbidade(comorbidade) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!comorbidade?.id_paciente || !comorbidade?.id_comorbidade) {
+      throw new Error('Campos obrigatórios.');
+    }
+
+    // Verificar se a comorbidade existe / está ativa
+    const rVerificacao = await client.query(
+      `
+      SELECT "Id"
+      FROM "Comorbidades"
+      WHERE "Id" = $1
+        AND "Ativo" = TRUE
+      `,
+      [comorbidade.id_comorbidade]
+    );
+
+    if (rVerificacao.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return {
+        ok: false,
+        warning: 'Essa comorbidade está indisponível ou inativa.'
+      };
+    }
+
+    // Inserir relação paciente ↔ comorbidade
+    const rNovo = await client.query(
+      `
+      INSERT INTO "PacienteComorbidade" (
+        "IdPaciente",
+        "IdComorbidade"
+      )
+      VALUES ($1, $2)
+      RETURNING *
+      `,
+      [
+        comorbidade.id_paciente,
+        comorbidade.id_comorbidade
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      ok: true,
+      pacienteComorbidade: rNovo.rows[0]
+    };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erro em paciente/comorbidade:', err.message);
+
+    // Se violou UNIQUE (mesma comorbidade já cadastrada p/ esse paciente)
+    if (err.code === '23505') {
+      return {
+        ok: false,
+        warning: 'Esse paciente já está marcado com essa comorbidade.'
+      };
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function selectPacienteComorbidade(nome) {
+  let query = `
+    SELECT
+      "PacienteComorbidade"."Id",
+      "Pacientes"."Nome"  AS "Paciente",
+      "Pacientes"."CPF",
+      "Comorbidades"."Nome"   AS "Comorbidade",
+      "PacienteComorbidade"."DataRegistro"
+    FROM "PacienteComorbidade"
+    INNER JOIN "Pacientes"
+      ON "PacienteComorbidade"."IdPaciente" = "Pacientes"."Id"
+    INNER JOIN "Comorbidades"
+      ON "PacienteComorbidade"."IdComorbidade" = "Comorbidades"."Id"
+  `;
+
+  const params = [];
+
+  if (nome) {
+    query += `
+      WHERE "Pacientes"."Nome" ILIKE $1
+    `;
+    params.push(`%${nome}%`);
+  }
+
+  const { rows } = await pool.query(query, params);
+  return rows;
+}
+
+async function updatePacienteComorbidade(id, comorbidade) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('Id é obrigatório.');
+
+    const sqlUpdate = `
+      UPDATE "PacienteComorbidade"
+      SET 
+        "IdPaciente"      = COALESCE($2, "PacienteComorbidade"."IdPaciente"),
+        "IdComorbidade"   = COALESCE($3, "PacienteComorbidade"."IdComorbidade")
+      WHERE "PacienteComorbidade"."Id" = $1
+      RETURNING *
+    `;
+
+    const paramsUpdate = [
+      id,
+      comorbidade.id_paciente ?? null,
+      comorbidade.id_comorbidade ?? null,
+      comorbidade.observacao ?? null
+    ];
+
+    const { rows: comorbidadeRows } = await client.query(sqlUpdate, paramsUpdate);
+
+    if (comorbidadeRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query('COMMIT');
+    return comorbidadeRows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // 23505 = violação de UNIQUE (mesma comorbidade duplicada p/ mesmo paciente)
+    if (err.code === '23505') {
+      throw new Error('Esse paciente já possui essa comorbidade registrada.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function removePacienteComorbidade(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID de relação paciente/comorbidade é obrigatório.');
+
+    const result = await client.query(
+      `
+      DELETE FROM "PacienteComorbidade" 
+      WHERE "Id" = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    if (err.code === '23503') {
+      throw new Error('Não foi possível excluir: existem registros vinculados a essa comorbidade do paciente.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 module.exports = { 
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
   insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
-  insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia
-
+  insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia,
+  insertPacienteComorbidade, selectPacienteComorbidade, updatePacienteComorbidade, removePacienteComorbidade
 };

@@ -2,7 +2,9 @@ const {
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
   insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
-  insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia 
+  insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia,
+  insertPacienteComorbidade, selectPacienteComorbidade, updatePacienteComorbidade, removePacienteComorbidade 
+
 } = require('../services/joinsService');
 
 async function postPacienteLeito(req, res) {
@@ -358,9 +360,126 @@ async function deletePacienteAlergia(req, res) {
 }
 
 
+//==================================================================================================================================
+//==================================================================================================================================
+
+async function postPacienteComorbidade(req, res) {
+  try {
+    const resultado = await insertPacienteComorbidade(req.body);
+
+    if (resultado && resultado.warning) {
+      return res.status(409).json({
+        ok: false,
+        message: resultado.warning
+      });
+    }
+
+    return res.status(201).json({
+      ok: true,
+      message: 'Comorbidade vinculada ao paciente com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      ok: false,
+      message: 'Erro ao vincular comorbidade ao paciente.',
+      error: err.message
+    });
+  }
+}
+
+async function getPacienteComorbidade(req, res) {
+  try {
+    const { nome } = req.query;
+    const resultado = await selectPacienteComorbidade(nome);
+
+    if (!resultado || resultado.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Nenhum registro de comorbidade encontrado.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Relações paciente/comorbidade encontradas.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao buscar comorbidades do paciente.',
+      error: err.message
+    });
+  }
+}
+
+
+async function putPacienteComorbidade(req, res) {
+  try {
+    const { id } = req.params;
+    const resultado = await updatePacienteComorbidade(id, req.body);
+
+    if (!resultado) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Relação paciente/comorbidade não encontrada.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Relação paciente/comorbidade atualizada com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao atualizar relação paciente/comorbidade.',
+      error: err.message
+    });
+  }
+}
+
+async function deletePacienteComorbidade(req, res) {
+  try {
+    const { id } = req.params;
+    const resultado = await removePacienteComorbidade(id);
+
+    if (!resultado) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Relação paciente/comorbidade não encontrada.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Relação paciente/comorbidade removida com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao remover relação paciente/comorbidade.',
+      error: err.message
+    });
+  }
+}
+
 module.exports = { 
   postPacienteLeito, getPacienteLeito, putPacienteLeito, 
   postProfissionalPermissao, getProfissionalPermissao, putProfissionalPermissao, deleteProfissionalPermissao,
   postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores,
-  postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia
+  postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,
+  postPacienteComorbidade, getPacienteComorbidade, putPacienteComorbidade, deletePacienteComorbidade
 };
