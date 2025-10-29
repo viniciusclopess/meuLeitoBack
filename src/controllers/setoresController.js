@@ -26,7 +26,7 @@ async function getSetor(req, res){
   try{
     const { nome } = req.query; 
     const resultado = await selectSetor(nome);
-    if(!resultado) return res.status(404).json( {message: "Setor não encontrado"} );
+    if(!resultado) return res.status(404).json( {message: "Setor não encontrado."} );
     return res.status(200).json( {message: "Setores encontrados:", data: resultado} )
   } catch (err) {
     console.error(err);
@@ -38,7 +38,7 @@ async function putSetor(req, res){
   try{
     const { id }  = req.params;
     const resultado = await updateSetor(id, req.body)
-    if(!resultado) return res.status(404).json( {message: "Setor não encontrado"} );
+    if(!resultado) return res.status(404).json( {message: "Setor não encontrado."} );
     return res.status(200).json( {message: "Setores atualizados:", data: resultado} )
   } catch(err){
     console.error(err);
@@ -50,7 +50,7 @@ async function deleteSetor(req, res){
   try{
     const { id }  = req.params;
     const resultado = await removeSetor(id)
-    if(!resultado) return res.status(404).json({message: "Setor não encontrado"});
+    if(!resultado) return res.status(404).json({message: "Setor não encontrado."});
 
     return res.status(200).json(resultado)
   } catch(err){

@@ -32,7 +32,7 @@ async function getLeito(req, res){
     const { nome } = req.query;
     const resultado = await selectLeito(nome);
     if(!resultado) return res.status(404).json({
-      message: "Leito não encontrado"
+      message: "Leito não encontrado."
     });
     return res.status(200).json({
       message: "Leitos encontrados:", 
@@ -52,7 +52,7 @@ async function putLeito(req, res){
     const { id } = req.params;
     const resultado = await updateLeito( id, req.body )
     if(!resultado) return res.status(404).json({
-      message: "Leito não encontrado"
+      message: "Leito não encontrado."
     });
     return res.status(200).json({
       message: "Leitos atualizados:", 
@@ -72,7 +72,7 @@ async function deleteLeito(req, res){
     const { id } = req.params;
     const resultado = await removeLeito(id)
     if(!resultado) return res.status(404).json({
-      message: "Leito não encontrado"
+      message: "Leito não encontrado."
     });
     return res.status(200).json({
       message: "Leitos removidos:", 
