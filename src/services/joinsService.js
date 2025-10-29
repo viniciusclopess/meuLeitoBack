@@ -341,9 +341,163 @@ async function removeProfissionalPermissao(id) {
 
 //==================================================================================================================================
 //==================================================================================================================================
+
+async function insertProfissionaisSetores(setorizacao) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!setorizacao?.id_profissional || !setorizacao?.id_setor) {
+      throw new Error('Campos obrigatórios.');
+    }
+
+    const rVerificacao = await client.query(
+      `
+      SELECT 
+        "Id"
+      FROM "Setores"
+      WHERE
+        "Id" = $1
+      `,
+      [setorizacao.id_setor]
+    );
+
+    if (rVerificacao.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return {
+        ok: false,
+        warning: 'Esse setor está indisponível.'
+      };
+    }
+
+    const rNovo = await client.query(
+      `
+      INSERT INTO "ProfissionaisSetores" ("IdProfissional", "IdSetor")
+      VALUES ($1, $2)
+      RETURNING *
+      `,
+      [
+        setorizacao.id_profissional,
+        setorizacao.id_setor
+      ]
+    );
+    await client.query('COMMIT');
+
+    return {
+      ok: true,
+      profissionalSetor: rNovo.rows[0]
+    };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erro em setorização:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function selectProfissionaisSetores(nome) {
+  let query = 
+  `SELECT
+      "ProfissionaisSetores"."Id",
+      "Profissionais"."Nome" AS "Profissional",
+      "Profissionais"."Cpf",
+      "Setores"."Nome" AS "Setor"
+    FROM "ProfissionaisSetores"
+    INNER JOIN "Profissionais" 
+      ON "ProfissionaisSetores"."IdProfissional" = "Profissionais"."Id"
+    INNER JOIN "Setores"
+      ON "ProfissionaisSetores"."IdSetor" = "Setores"."Id"
+    `;
+  const params = [];
+  if (nome) {
+    query += 
+    ` WHERE 
+        "Profissionais"."Nome" ILIKE $1               
+    `;
+    params.push(`%${nome}%`);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
+}
+
+async function updateProfissionaisSetores(id, setorizacao) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('Id é obrigatório.');
+
+    const rUpdateSetorizacao = `
+      UPDATE "ProfissionaisSetores"
+      SET 
+        "IdProfissional"  = COALESCE($2, "ProfissionaisSetores"."IdProfissional"),
+        "IdSetor"         = COALESCE($3, "ProfissionaisSetores"."IdSetor")
+      WHERE "ProfissionaisSetores"."Id" = $1
+      RETURNING 
+        *
+    `;
+
+    const paramsSetorizacao = [
+      id,
+      setorizacao.id_profissional ?? null,
+      setorizacao.id_setor ?? null
+    ];
+
+    const { rows: setorizacaoRows } = await client.query(rUpdateSetorizacao, paramsSetorizacao);
+
+    if (setorizacaoRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query('COMMIT');
+    return setorizacaoRows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function removeProfissionaisSetores(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID de setorização é obrigatório.');
+
+    const result = await client.query(
+      `DELETE FROM "ProfissionaisSetores" 
+       WHERE "Id" = $1
+       RETURNING *`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // 23503 = violação de chave estrangeira (há registros dependentes)
+    if (err.code === '23503') {
+      throw new Error('Não foi possível excluir: há registros relacionados a este profissional.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+//==================================================================================================================================
+//==================================================================================================================================
 module.exports = { 
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
-  insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao
-  
-
+  insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
+  insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores
 };
