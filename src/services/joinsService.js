@@ -185,4 +185,8 @@ async function updatePacienteLeito(id, alocacao) {
   }
 }
 
-module.exports = { insertPacienteLeito, selectPacienteLeito, updatePacienteLeito };
+module.exports = { 
+  insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
+  
+
+};
