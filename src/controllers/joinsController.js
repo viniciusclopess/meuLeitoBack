@@ -1,7 +1,8 @@
 const { 
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
-  insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores 
+  insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
+  insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia 
 } = require('../services/joinsService');
 
 async function postPacienteLeito(req, res) {
@@ -155,6 +156,7 @@ async function deleteProfissionalPermissao(req, res){
 
 //==================================================================================================================================
 //==================================================================================================================================
+
 async function postProfissionaisSetores(req, res) {
   try {
     const resultado = await insertProfissionaisSetores(req.body);
@@ -239,8 +241,126 @@ async function deleteProfissionaisSetores(req, res){
   }
 }
 
+//==================================================================================================================================
+//==================================================================================================================================
+
+async function postPacienteAlergia(req, res) {
+  try {
+    const resultado = await insertPacienteAlergia(req.body);
+
+    if (resultado && resultado.warning) {
+      return res.status(409).json({
+        ok: false,
+        message: resultado.warning
+      });
+    }
+
+    return res.status(201).json({
+      ok: true,
+      message: 'Alergia vinculada ao paciente com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      ok: false,
+      message: 'Erro ao vincular alergia ao paciente.',
+      error: err.message
+    });
+  }
+}
+
+async function getPacienteAlergia(req, res) {
+  try {
+    const { nome } = req.query;
+    const resultado = await selectPacienteAlergia(nome);
+
+    if (!resultado || resultado.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Nenhum registro de alergia encontrado.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Relações paciente/alergia encontradas.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao buscar alergias do paciente.',
+      error: err.message
+    });
+  }
+}
+
+
+async function putPacienteAlergia(req, res) {
+  try {
+    const { id } = req.params;
+    const resultado = await updatePacienteAlergia(id, req.body);
+
+    if (!resultado) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Relação paciente/alergia não encontrada.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Relação paciente/alergia atualizada com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao atualizar relação paciente/alergia.',
+      error: err.message
+    });
+  }
+}
+
+async function deletePacienteAlergia(req, res) {
+  try {
+    const { id } = req.params;
+    const resultado = await removePacienteAlergia(id);
+
+    if (!resultado) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Relação paciente/alergia não encontrada.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Relação paciente/alergia removida com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao remover relação paciente/alergia.',
+      error: err.message
+    });
+  }
+}
+
+
 module.exports = { 
   postPacienteLeito, getPacienteLeito, putPacienteLeito, 
   postProfissionalPermissao, getProfissionalPermissao, putProfissionalPermissao, deleteProfissionalPermissao,
-  postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores 
+  postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores,
+  postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia
 };

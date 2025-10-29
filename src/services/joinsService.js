@@ -496,8 +496,188 @@ async function removeProfissionaisSetores(id) {
 }
 //==================================================================================================================================
 //==================================================================================================================================
+
+async function insertPacienteAlergia(alergia) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!alergia?.id_paciente || !alergia?.id_alergia) {
+      throw new Error('Campos obrigatórios.');
+    }
+
+    // Verificar se a alergia existe / está ativa
+    const rVerificacao = await client.query(
+      `
+      SELECT "Id"
+      FROM "Alergias"
+      WHERE "Id" = $1
+        AND "Ativo" = TRUE
+      `,
+      [alergia.id_alergia]
+    );
+
+    if (rVerificacao.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return {
+        ok: false,
+        warning: 'Essa alergia está indisponível ou inativa.'
+      };
+    }
+
+    // Inserir relação paciente ↔ alergia
+    const rNovo = await client.query(
+      `
+      INSERT INTO "PacienteAlergia" (
+        "IdPaciente",
+        "IdAlergia"
+      )
+      VALUES ($1, $2)
+      RETURNING *
+      `,
+      [
+        alergia.id_paciente,
+        alergia.id_alergia
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      ok: true,
+      pacienteAlergia: rNovo.rows[0]
+    };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erro em paciente/alergia:', err.message);
+
+    // Se violou UNIQUE (mesma alergia já cadastrada p/ esse paciente)
+    if (err.code === '23505') {
+      return {
+        ok: false,
+        warning: 'Esse paciente já está marcado com essa alergia.'
+      };
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function selectPacienteAlergia(nome) {
+  let query = `
+    SELECT
+      "PacienteAlergia"."Id",
+      "Pacientes"."Nome"  AS "Paciente",
+      "Pacientes"."CPF",
+      "Alergias"."Nome"   AS "Alergia",
+      "PacienteAlergia"."DataRegistro"
+    FROM "PacienteAlergia"
+    INNER JOIN "Pacientes"
+      ON "PacienteAlergia"."IdPaciente" = "Pacientes"."Id"
+    INNER JOIN "Alergias"
+      ON "PacienteAlergia"."IdAlergia" = "Alergias"."Id"
+  `;
+
+  const params = [];
+
+  if (nome) {
+    query += `
+      WHERE "Pacientes"."Nome" ILIKE $1
+    `;
+    params.push(`%${nome}%`);
+  }
+
+  const { rows } = await pool.query(query, params);
+  return rows;
+}
+
+async function updatePacienteAlergia(id, alergia) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('Id é obrigatório.');
+
+    const sqlUpdate = `
+      UPDATE "PacienteAlergia"
+      SET 
+        "IdPaciente" = COALESCE($2, "PacienteAlergia"."IdPaciente"),
+        "IdAlergia"  = COALESCE($3, "PacienteAlergia"."IdAlergia")
+      WHERE "PacienteAlergia"."Id" = $1
+      RETURNING *
+    `;
+
+    const paramsUpdate = [
+      id,
+      alergia.id_paciente ?? null,
+      alergia.id_alergia ?? null,
+      alergia.observacao ?? null
+    ];
+
+    const { rows: alergiaRows } = await client.query(sqlUpdate, paramsUpdate);
+
+    if (alergiaRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query('COMMIT');
+    return alergiaRows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // 23505 = violação de UNIQUE (mesma alergia duplicada p/ mesmo paciente)
+    if (err.code === '23505') {
+      throw new Error('Esse paciente já possui essa alergia registrada.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function removePacienteAlergia(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID de relação paciente/alergia é obrigatório.');
+
+    const result = await client.query(
+      `
+      DELETE FROM "PacienteAlergia" 
+      WHERE "Id" = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    if (err.code === '23503') {
+      throw new Error('Não foi possível excluir: existem registros vinculados a essa alergia do paciente.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = { 
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
-  insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores
+  insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
+  insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia
+
 };
