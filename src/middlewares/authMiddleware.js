@@ -1,20 +1,48 @@
 const jwt = require('jsonwebtoken');
 
-function authMiddleware(req, res, next) {
-  try {
-    const auth = req.headers.authorization || '';
-    const [, token] = auth.split(' '); // "Bearer"
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
-    if (!token) {
-      return res.status(401).json({ ok: false, message: 'Token não fornecido' });
+function autenticarJWT(req, res, next) {
+  try {
+    const authHeader = req.headers['authorization'];
+
+    if (!authHeader) {
+      return res.status(401).json({
+        ok: false,
+        message: 'Token não informado.'
+      });
     }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    req.user = payload; 
+    // Esperado: "Bearer abc.def.ghi"
+    const partes = authHeader.split(' ');
+    if (partes.length !== 2 || partes[0] !== 'Bearer') {
+      return res.status(401).json({
+        ok: false,
+        message: 'Formato de token inválido.'
+      });
+    }
+
+    const token = partes[1];
+
+    // Verifica e decodifica
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Disponibiliza o usuário para as próximas rotas
+    req.user = decoded; 
+    // req.user = { sub, cpf, permissoes: [...], iat, exp }
+
     return next();
+
   } catch (err) {
-    return res.status(401).json({ ok: false, message: 'Token inválido', error: err.message });
+    console.error('Erro no autenticarJWT:', err.message);
+    return res.status(401).json({
+      ok: false,
+      message: 'Token inválido ou expirado.',
+      error: err.message
+    });
   }
 }
 
-module.exports = authMiddleware;
+module.exports = {
+  autenticarJWT,
+};
