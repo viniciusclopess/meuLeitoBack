@@ -3,7 +3,8 @@ const {
     postPacienteLeito, getPacienteLeito, putPacienteLeito, 
     postProfissionalPermissao, getProfissionalPermissao, putProfissionalPermissao, deleteProfissionalPermissao,
     postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores,
-    postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia
+    postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,
+    postPacienteComorbidade, getPacienteComorbidade, putPacienteComorbidade, deletePacienteComorbidade
 } = require('../controllers/joinsController');
 
 const router = express.Router();
@@ -22,9 +23,14 @@ router.get('/setorizacao/', getProfissionaisSetores);
 router.put('/setorizacao/:id', putProfissionaisSetores);
 router.delete('/setorizacao/:id', deleteProfissionaisSetores);
 
-router.post('/pacienteAlergia/', postPacienteAlergia);
-router.get('/pacienteAlergia/', getPacienteAlergia);
-router.put('/pacienteAlergia/:id', putPacienteAlergia);
-router.delete('/pacienteAlergia/:id', deletePacienteAlergia);
+router.post('/paciente-alergia/', postPacienteAlergia);
+router.get('/paciente-alergia/', getPacienteAlergia);
+router.put('/paciente-alergia/:id', putPacienteAlergia);
+router.delete('/paciente-alergia/:id', deletePacienteAlergia);
+
+router.post('/paciente-comorbidade/', postPacienteComorbidade);
+router.get('/paciente-comorbidade/', getPacienteComorbidade);
+router.put('/paciente-comorbidade/:id', putPacienteComorbidade);
+router.delete('/paciente-comorbidade/:id', deletePacienteComorbidade);
 
 module.exports = router;
