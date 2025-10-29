@@ -16,7 +16,7 @@ async function postPerfil(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      message: 'Erro ao criar alergia.',
+      message: 'Erro ao criar perfil.',
       error: err.message
     });
   }
@@ -30,7 +30,7 @@ async function getPerfil(req, res){
     return res.status(200).json( {message: "Perfis encontrados:", data: resultado} )
   } catch (err) {
     console.error(err);
-    return res.status(400).json( { message: 'Erro ao buscar alergia.', error: err.message} );
+    return res.status(400).json( { message: 'Erro ao buscar perfil.', error: err.message} );
   }
 }
 
@@ -42,7 +42,7 @@ async function putPerfil(req, res){
     return res.status(200).json( {message: "Perfis atualizadas:", data: resultado} )
   } catch(err){
     console.error(err);
-    return res.status(400).json( { message: 'Erro ao atualizar alergia.', error: err.message} )
+    return res.status(400).json( { message: 'Erro ao atualizar perfil.', error: err.message} )
   }
 }
 
@@ -54,7 +54,7 @@ async function deletePerfil(req, res){
     return res.status(200).json(resultado)
   } catch(err){
     console.error(err);
-    return res.status(400).json({ message: 'Erro ao deletar alergia.', error: err.message})
+    return res.status(400).json({ message: 'Erro ao deletar perfil.', error: err.message})
   }
 }
 

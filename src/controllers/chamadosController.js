@@ -44,7 +44,7 @@ async function putAceitarChamado(req, res){
     const {id_chamado, id_enfermeira} = req.body;
     const chamado = await aceitarChamado(id_chamado, id_enfermeira)
 
-    if(!chamado) return res.status(404).json({message: "Chamado não encontrado"});
+    if(!chamado) return res.status(404).json({message: "Chamado não encontrado."});
     return res.status(200).json({ data: chamado})
   } catch(err){
     console.error(err);
@@ -57,7 +57,7 @@ async function putFinalizarChamado(req, res){
     const {id_chamado, id_enfermeira} = req.body;
     const chamado = await finalizarChamado(id_chamado, id_enfermeira)
 
-    if(!chamado) return res.status(404).json({message: "Chamado não encontrado"});
+    if(!chamado) return res.status(404).json({message: "Chamado não encontrado."});
     return res.status(200).json({ data: chamado})
   } catch(err){
     console.error(err);

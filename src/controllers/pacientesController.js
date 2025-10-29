@@ -32,7 +32,7 @@ async function getPaciente(req, res){
     const { nome } = req.query;
     const resultado = await selectPaciente(nome);
     if(!resultado) return res.status(404).json({
-      message: "Paciente não encontrado"
+      message: "Paciente não encontrado."
     });
     return res.status(200).json({
       message: "Pacientes encontrados:", 
@@ -52,7 +52,7 @@ async function putPaciente(req, res){
     const { id } = req.params;
     const resultado = await updatePaciente( id, req.body )
     if(!resultado) return res.status(404).json({
-      message: "Paciente não encontrado"
+      message: "Paciente não encontrado."
     });
     return res.status(200).json({
       message: "Pacientes atualizados:", 
@@ -72,7 +72,7 @@ async function deletePaciente(req, res){
     const { id } = req.params;
     const resultado = await removePaciente(id)
     if(!resultado) return res.status(404).json({
-      message: "Paciente não encontrado"
+      message: "Paciente não encontrado."
     });
     return res.status(200).json({
       message: "Pacientes removidos:", 
