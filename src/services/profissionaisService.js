@@ -41,7 +41,7 @@ async function insertProfissional(profissional) {
     const rNovo = await client.query(
       `INSERT INTO "Profissionais" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Senha", "NumeroDeRegistro", "IdPerfil")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING "Id"`,
+      RETURNING *`,
       [
         cpfLimpo,
         profissional.nome,
@@ -69,7 +69,8 @@ async function insertProfissional(profissional) {
 
 async function selectProfissional(nome) {
   let query = 
-  `SELECT 
+  `SELECT
+      prof."Id", 
       prof."Nome", 
       prof."Cpf", 
       prof."Nascimento", 
