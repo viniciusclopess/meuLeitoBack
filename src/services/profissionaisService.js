@@ -14,7 +14,7 @@ async function insertProfissional(profissional) {
       !profissional?.nascimento ||
       !profissional?.sexo ||
       !profissional?.senha ||
-      !profissional?.idPerfil
+      !profissional?.id_perfil
     ) {
       throw new Error('Campos obrigatórios!');
     }
@@ -49,8 +49,8 @@ async function insertProfissional(profissional) {
         profissional.sexo,
         profissional.telefone ?? null,
         senhaHash,
-        profissional.numeroDeRegistro ?? null,
-        profissional.idPerfil
+        profissional.numero_registro ?? null,
+        profissional.id_perfil
       ]
     );
 
@@ -119,8 +119,8 @@ async function updateProfissional(id, profissional) {
         profissional.nascimento ?? null,
         profissional.sexo ?? null,
         profissional.telefone ?? null,
-        profissional.numeroDeRegistro ?? null,
-        profissional.idPerfil ?? null
+        profissional.numero_registro ?? null,
+        profissional.id_perfil ?? null
       ]
     );
 

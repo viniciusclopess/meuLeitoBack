@@ -62,14 +62,12 @@ async function insertPacienteLeito(alocacao) {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Erro em alocacao:', err.message);
+    console.error('Erro em alocação:', err.message);
     throw err;
   } finally {
     client.release();
   }
 }
-
-
 
 async function selectPacienteLeito(nome) {
   let query = 
@@ -185,8 +183,167 @@ async function updatePacienteLeito(id, alocacao) {
   }
 }
 
+//==================================================================================================================================
+//==================================================================================================================================
+
+async function insertProfissionalPermissao(permissao) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!permissao?.id_profissional || !permissao?.id_permissao) {
+      throw new Error('Campos obrigatórios.');
+    }
+
+    const rVerificacao = await client.query(
+      `
+      SELECT 
+        "Id"
+      FROM "Permissoes"
+      WHERE
+        "Id" = $1
+      `,
+      [permissao.id_permissao]
+    );
+
+    if (rVerificacao.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return {
+        ok: false,
+        warning: 'Essa permissão está indisponível.'
+      };
+    }
+
+    const rNovo = await client.query(
+      `
+      INSERT INTO "ProfissionalPermissao" ("IdProfissional", "IdPermissao")
+      VALUES ($1, $2)
+      RETURNING *
+      `,
+      [
+        permissao.id_profissional,
+        permissao.id_permissao
+      ]
+    );
+    await client.query('COMMIT');
+
+    return {
+      ok: true,
+      profissionalPermissao: rNovo.rows[0]
+    };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erro em permissão:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function selectProfissionalPermissao(nome) {
+  let query = 
+  `SELECT
+      "ProfissionalPermissao"."Id",
+      "Profissionais"."Nome" AS "Nome",
+      "Profissionais"."Cpf" AS "Login",
+      "Permissoes"."Nome" AS "Permissao"
+    FROM "ProfissionalPermissao"
+    INNER JOIN "Profissionais" 
+      ON "ProfissionalPermissao"."IdProfissional" = "Profissionais"."Id"
+    INNER JOIN "Permissoes"
+      ON "ProfissionalPermissao"."IdPermissao" = "Permissoes"."Id"
+    `;
+  const params = [];
+  if (nome) {
+    query += 
+    ` WHERE 
+        "Profissionais"."Nome" ILIKE $1               
+    `;
+    params.push(`%${nome}%`);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
+}
+
+async function updateProfissionalPermissao(id, permissao) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('Id é obrigatório.');
+
+    const rUpdatePermissao = `
+      UPDATE "ProfissionalPermissao"
+      SET 
+        "IdProfissional"  = COALESCE($2, "ProfissionalPermissao"."IdProfissional"),
+        "IdPermissao"     = COALESCE($3, "ProfissionalPermissao"."IdPermissao")
+      WHERE "ProfissionalPermissao"."Id" = $1
+      RETURNING 
+        *
+    `;
+
+    const paramsPermissao = [
+      id,
+      permissao.id_profissional ?? null,
+      permissao.id_permissao ?? null
+    ];
+
+    const { rows: permissaoRows } = await client.query(rUpdatePermissao, paramsPermissao);
+
+    if (permissaoRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query('COMMIT');
+    return permissaoRows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function removeProfissionalPermissao(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!id) throw new Error('ID de controle da permissão é obrigatório.');
+
+    const result = await client.query(
+      `DELETE FROM "ProfissionalPermissao" 
+       WHERE "Id" = $1
+       RETURNING *`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    if (result.rowCount === 0) return null;
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    // 23503 = violação de chave estrangeira (há registros dependentes)
+    if (err.code === '23503') {
+      throw new Error('Não foi possível excluir: há registros relacionados a este profissional.');
+    }
+
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+//==================================================================================================================================
+//==================================================================================================================================
 module.exports = { 
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
+  insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao
   
 
 };
