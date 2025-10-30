@@ -55,49 +55,55 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
     ON "Chamados"."IdProfissional" = "Profissionais"."Id"
   INNER JOIN "Leitos"
     ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
-`;
+  `;
 
   const params = [];
+  let paramIndex = 1;  // Inicializa o índice de parâmetro
 
   if (id_paciente_leito) {
-    query += ` WHERE "Chamados"."IdPacienteLeito" = $1`;
+    query += ` WHERE "Chamados"."IdPacienteLeito" = $${paramIndex}`;
     params.push(id_paciente_leito);
+    paramIndex++;
   }
 
   if (id_profissional) {
     if (params.length > 0) {
-      query += ` AND "Chamados"."IdProfissional" = $2`;
+      query += ` AND "Chamados"."IdProfissional" = $${paramIndex}`;
     } else {
-      query += ` WHERE "Chamados"."IdProfissional" = $2`;
+      query += ` WHERE "Chamados"."IdProfissional" = $${paramIndex}`;
     }
     params.push(id_profissional);
+    paramIndex++;
   }
   
   if (id_paciente) {
     if (params.length > 0) {
-      query += ` AND "Pacientes"."Id" = $3`;
+      query += ` AND "Pacientes"."Id" = $${paramIndex}`;
     } else {
-      query += ` WHERE "Pacientes"."Id" = $3`;
+      query += ` WHERE "Pacientes"."Id" = $${paramIndex}`;
     }
     params.push(id_paciente);
+    paramIndex++;
   }
   
   if (id_leito) {
     if (params.length > 0) {
-      query += ` AND "Leitos"."Id" = $4`;
+      query += ` AND "Leitos"."Id" = $${paramIndex}`;
     } else {
-      query += ` WHERE "Leitos"."Id" = $4`;
+      query += ` WHERE "Leitos"."Id" = $${paramIndex}`;
     }
     params.push(id_leito);
+    paramIndex++;
   }
 
   if (status) {
     if (params.length > 0) {
-      query += ` AND "Chamados"."Status" = $5`;
+      query += ` AND "Chamados"."Status" = $${paramIndex}`;
     } else {
-      query += ` WHERE "Chamados"."Status" = $5`;
+      query += ` WHERE "Chamados"."Status" = $${paramIndex}`;
     }
     params.push(status);
+    paramIndex++;
   }
 
   query += ' ORDER BY "Chamados"."DataCriacao" DESC';
