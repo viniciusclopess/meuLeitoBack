@@ -1,16 +1,12 @@
 const { pool } = require('../db/pool');
 const bcrypt = require('bcryptjs');
 
-/**
- * Busca um profissional pelo CPF e retorna suas permissões.
- * Junta as tabelas Profissionais, ProfissionaisPermissoes e Permissoes.
- */
-async function findUserLogin(cpf) {
+async function findUserLogin(login) {
   const { rows } = await pool.query(
     `
     SELECT
       p."Id"                                     AS "id",
-      p."Cpf"                                    AS "cpf",
+      p."Cpf"                                    AS "login",
       p."Senha"                                  AS "senha",
       p."Ativo"                                  AS "ativo",
       COALESCE(
@@ -19,7 +15,7 @@ async function findUserLogin(cpf) {
         '{}'
       ) AS "permissoes"
     FROM "Profissionais" p
-    LEFT JOIN "ProfissionaisPermissoes" pp
+    LEFT JOIN "ProfissionalPermissao" pp
       ON pp."IdProfissional" = p."Id"
     LEFT JOIN "Permissoes" pm
       ON pm."Id" = pp."IdPermissao"
@@ -27,24 +23,20 @@ async function findUserLogin(cpf) {
     GROUP BY p."Id", p."Cpf", p."Senha", p."Ativo"
     LIMIT 1
     `,
-    [cpf]
+    [login]
   );
 
   return rows[0] || null;
 }
 
-/**
- * Compara senha enviada com a armazenada.
- * Suporta tanto hash bcrypt quanto texto puro (modo dev).
- */
 async function verifyPassword(plain, hashedOrPlain) {
   if (typeof hashedOrPlain === 'string' && hashedOrPlain.startsWith('$2')) {
     return bcrypt.compare(plain, hashedOrPlain); // senha com bcrypt
   }
-  return plain === hashedOrPlain; // fallback pra testes locais
+  return plain === hashedOrPlain; 
 }
 
 module.exports = {
   findUserLogin,
-  verifyPassword,
+  verifyPassword
 };

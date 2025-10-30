@@ -6,15 +6,15 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
 async function fazerLogin(req, res) {
   try {
-    const { cpf, senha } = req.body;
+    const { login, senha } = req.body;
 
     // 1) Buscar usuário no banco
-    const user = await findUserLogin(cpf);
+    const user = await findUserLogin(login);
 
     if (!user) {
       return res.status(401).json({
         ok: false,
-        message: 'CPF ou senha inválidos.'
+        message: 'Login ou senha inválidos.'
       });
     }
 
@@ -30,14 +30,14 @@ async function fazerLogin(req, res) {
     if (!senhaValida) {
       return res.status(401).json({
         ok: false,
-        message: 'CPF ou senha inválidos.'
+        message: 'Login ou senha inválidos.'
       });
     }
 
     // 3) Montar payload do token
     const payload = {
       sub: user.id,                // subject = id do usuário
-      cpf: user.cpf,
+      login: user.login,
       permissoes: user.permissoes, // array de permissões
     };
 
@@ -53,8 +53,8 @@ async function fazerLogin(req, res) {
       token,
       usuario: {
         id: user.id,
-        cpf: user.cpf,
-        permissoes: user.permissoes,
+        login: user.login,
+        permissoes: user.permissoes
       }
     });
 
