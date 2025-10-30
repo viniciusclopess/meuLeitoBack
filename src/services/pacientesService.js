@@ -28,8 +28,8 @@ async function insertPaciente(paciente) {
     }
 
     const rNovo = await client.query(
-      `INSERT INTO "Pacientes" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Altura", "Peso", "TipoSanguineo", "Rotina")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO "Pacientes" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Altura", "Peso", "TipoSanguineo")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING "Id"`,
       [
         cpfLimpo,
@@ -39,8 +39,7 @@ async function insertPaciente(paciente) {
         paciente.telefone ?? null,
         paciente.altura ?? null,
         paciente.peso ?? null,
-        paciente.tipo_sanguineo ?? null,
-        paciente.rotina ?? null
+        paciente.tipo_sanguineo ?? null
       ]
     );
     await client.query('COMMIT');
@@ -87,8 +86,7 @@ async function updatePaciente(id, paciente) {
           "Telefone"        =  COALESCE($6, "Telefone"),
           "Altura"          =  COALESCE($7, "Altura"),
           "Peso"            =  COALESCE($8, "Peso"),
-          "TipoSanguineo"   =  COALESCE($9, "TipoSanguineo"),
-          "Rotina"          =  COALESCE($10, "Rotina")
+          "TipoSanguineo"   =  COALESCE($9, "TipoSanguineo")
         WHERE "Id" = $1
       RETURNING *`,
       [
@@ -100,8 +98,7 @@ async function updatePaciente(id, paciente) {
         paciente.telefone ?? null,
         paciente.altura ?? null,
         paciente.peso ?? null,
-        paciente.tipo_sanguineo ?? null,
-        paciente.rotina ?? null
+        paciente.tipo_sanguineo ?? null
       ]
     );
 
