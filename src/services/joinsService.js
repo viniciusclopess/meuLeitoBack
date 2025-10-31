@@ -34,7 +34,7 @@ async function insertPacienteLeito(alocacao) {
       `
       INSERT INTO "PacienteLeito" ("IdPaciente", "IdLeito")
       VALUES ($1, $2)
-      RETURNING "Id", "IdPaciente", "IdLeito"
+      RETURNING *
       `,
       [
         alocacao.id_paciente,
@@ -46,7 +46,7 @@ async function insertPacienteLeito(alocacao) {
     await client.query(
       `
       UPDATE "Leitos"
-      SET "Status" = 'Ocupado'
+        SET "Status" = 'Ocupado'
       WHERE "Id" = $1
       `,
       [alocacao.id_leito]
@@ -71,8 +71,10 @@ async function insertPacienteLeito(alocacao) {
 
 async function selectPacienteLeito(nome) {
   let query = 
-  `SELECT 
+  `SELECT
+      "PacienteLeito"."Id", 
       "Pacientes"."Nome" AS "NomePaciente",
+      "Pacientes"."Cpf" AS "CpfPaciente,
       "Leitos"."Nome" AS "NomeLeito",
       "PacienteLeito"."DataEntrada",
       "PacienteLeito"."DataSaida"
@@ -402,7 +404,7 @@ async function selectProfissionaisSetores(nome) {
   `SELECT
       "ProfissionaisSetores"."Id",
       "Profissionais"."Nome" AS "Profissional",
-      "Profissionais"."Cpf",
+      "Profissionais"."Cpf" AS "CpfProfissional",
       "Setores"."Nome" AS "Setor"
     FROM "ProfissionaisSetores"
     INNER JOIN "Profissionais" 
@@ -572,7 +574,7 @@ async function selectPacienteAlergia(nome) {
     SELECT
       "PacienteAlergia"."Id",
       "Pacientes"."Nome"  AS "Paciente",
-      "Pacientes"."CPF",
+      "Pacientes"."Cpf" AS "CpfPaciente",
       "Alergias"."Nome"   AS "Alergia",
       "PacienteAlergia"."DataRegistro"
     FROM "PacienteAlergia"
@@ -752,7 +754,7 @@ async function selectPacienteComorbidade(nome) {
     SELECT
       "PacienteComorbidade"."Id",
       "Pacientes"."Nome"  AS "Paciente",
-      "Pacientes"."CPF",
+      "Pacientes"."Cpf" AS "CpfPaciente",
       "Comorbidades"."Nome"   AS "Comorbidade",
       "PacienteComorbidade"."DataRegistro"
     FROM "PacienteComorbidade"

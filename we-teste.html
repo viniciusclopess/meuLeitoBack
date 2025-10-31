@@ -1,18 +1,44 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Teste Socket</title>
+  </head>
   <body>
-    <h3>Teste WebSocket Meu Leito</h3>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <h2>Teste de Socket do Meu Leito</h2>
+
+    <label>Id do profissional:</label>
+    <input id="prof" value="7" />
+    <button onclick="registrar()">Registrar profissional</button>
+
+    <h3>Logs:</h3>
+    <pre id="log"></pre>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-      const socket = io("ws://localhost:3500", { transports: ["websocket"] });
+      const socket = io("http://localhost:3500");
 
-      socket.on("connect", () => {
-        console.log("✅ Conectado:", socket.id);
+      socket.on("connect", () => log("✅ conectado: " + socket.id));
+      socket.on("disconnect", () => log("❌ desconectado"));
+
+      socket.on("setores_registrados", (setores) => {
+        log("📦 setores_registrados: " + JSON.stringify(setores));
       });
 
-      socket.on("disconnect", () => {
-        console.log("❌ Desconectado");
+      socket.on("novo_chamado", (dados) => {
+        log("📢 novo_chamado: " + JSON.stringify(dados));
       });
+
+      function registrar() {
+        const id = document.getElementById("prof").value;
+        socket.emit("registrar_profissional", { profissionalId: Number(id) });
+        log("➡️ mandei registrar_profissional com id=" + id);
+      }
+
+      function log(msg) {
+        const pre = document.getElementById("log");
+        pre.textContent += msg + "\n";
+      }
     </script>
   </body>
 </html>
