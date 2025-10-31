@@ -70,22 +70,27 @@ async function insertProfissional(profissional) {
 async function selectProfissional(nome) {
   let query = 
   `SELECT
-      prof."Id", 
-      prof."Nome", 
-      prof."Cpf", 
-      prof."Nascimento", 
-      prof."Sexo", 
-      prof."Telefone", 
-      prof."NumeroDeRegistro", 
-      pf."Nome" as "Perfil"
-    FROM "Profissionais" prof
-    INNER JOIN "Perfis" pf
-    ON prof."IdPerfil" = pf."Id"`;
+      PR."Id", 
+      PR."Nome", 
+      PR."Cpf", 
+      PR."Nascimento", 
+      PR."Sexo", 
+      PR."Telefone", 
+      PR."NumeroDeRegistro", 
+      PF."Nome" as "Perfil",
+      ARRAY_AGG(ST."Nome") AS "Setores"
+    FROM "Profissionais" PR
+    INNER JOIN "Perfis" PF ON PR."IdPerfil" = PF."Id"
+    LEFT JOIN "ProfissionaisSetores" PS ON PR."Id" = PS."IdProfissional"
+    LEFT JOIN "Setores" ST ON ST."Id" = PS."IdSetor"
+    `;
   const params = [];
   if (nome) {
-    query += ' WHERE prof."Nome" ILIKE $1';
+    query += ' WHERE PR."Nome" ILIKE $1';
     params.push(`%${nome}%`);
   }
+  query += ' GROUP BY PR."Id", PF."Nome"';
+
   const { rows } = await pool.query(query, params);
   return rows;
 }
