@@ -76,7 +76,8 @@ async function selectProfissional(nome) {
       PR."Nascimento", 
       PR."Sexo", 
       PR."Telefone", 
-      PR."NumeroDeRegistro", 
+      PR."NumeroDeRegistro",
+      PF."Id" as "IdPerfil" 
       PF."Nome" as "Perfil",
       ARRAY_AGG(ST."Nome") AS "Setores"
     FROM "Profissionais" PR
