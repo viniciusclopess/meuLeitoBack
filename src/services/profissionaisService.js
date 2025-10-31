@@ -23,7 +23,7 @@ async function insertProfissional(profissional) {
     const cpfLimpo = cleanCpf(profissional.cpf)
     const saltRounds = 10
     const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
-    
+
 
     // 1) Buscar profissional por CPF
     const rProfissional = await client.query(
@@ -55,10 +55,10 @@ async function insertProfissional(profissional) {
     );
 
     await client.query('COMMIT');
-    return{
+    return {
       ok: true,
       profissional: rNovo.rows[0]
-    } 
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -68,8 +68,8 @@ async function insertProfissional(profissional) {
 }
 
 async function selectProfissional(nome) {
-  let query = 
-  `SELECT
+  let query =
+    `SELECT
       prof."Id", 
       prof."Nome", 
       prof."Cpf", 
@@ -77,7 +77,8 @@ async function selectProfissional(nome) {
       prof."Sexo", 
       prof."Telefone", 
       prof."NumeroDeRegistro", 
-      pf."Nome" as "Perfil"
+      pf."Nome" as "Perfil",
+      pf."Id" as "IdPerfil"
     FROM "Profissionais" prof
     INNER JOIN "Perfis" pf
     ON prof."IdPerfil" = pf."Id"`;
@@ -94,11 +95,11 @@ async function updateProfissional(id, profissional) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     if (!id) throw new Error('Id do profissional é obrigatório.');
-    if(profissional.senha){
+    if (profissional.senha) {
       const saltRounds = 10;
-      const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);      
+      const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
     }
 
     const { rows } = await client.query(
@@ -114,7 +115,7 @@ async function updateProfissional(id, profissional) {
         WHERE "Id" = $1
       RETURNING *`,
       [
-        id, 
+        id,
         profissional.cpf ?? null,
         profissional.nome ?? null,
         profissional.nascimento ?? null,
