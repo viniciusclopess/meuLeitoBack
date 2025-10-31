@@ -23,7 +23,7 @@ async function insertProfissional(profissional) {
     const cpfLimpo = cleanCpf(profissional.cpf)
     const saltRounds = 10
     const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
-    
+
 
     // 1) Buscar profissional por CPF
     const rProfissional = await client.query(
@@ -55,10 +55,10 @@ async function insertProfissional(profissional) {
     );
 
     await client.query('COMMIT');
-    return{
+    return {
       ok: true,
       profissional: rNovo.rows[0]
-    } 
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -82,8 +82,7 @@ async function selectProfissional(nome) {
     FROM "Profissionais" PR
     INNER JOIN "Perfis" PF ON PR."IdPerfil" = PF."Id"
     LEFT JOIN "ProfissionaisSetores" PS ON PR."Id" = PS."IdProfissional"
-    LEFT JOIN "Setores" ST ON ST."Id" = PS."IdSetor"
-    `;
+    LEFT JOIN "Setores" ST ON ST."Id" = PS."IdSetor"`;
   const params = [];
   if (nome) {
     query += ' WHERE PR."Nome" ILIKE $1';
@@ -99,11 +98,11 @@ async function updateProfissional(id, profissional) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     if (!id) throw new Error('Id do profissional é obrigatório.');
-    if(profissional.senha){
+    if (profissional.senha) {
       const saltRounds = 10;
-      const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);      
+      const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
     }
 
     const { rows } = await client.query(
@@ -119,7 +118,7 @@ async function updateProfissional(id, profissional) {
         WHERE "Id" = $1
       RETURNING *`,
       [
-        id, 
+        id,
         profissional.cpf ?? null,
         profissional.nome ?? null,
         profissional.nascimento ?? null,
