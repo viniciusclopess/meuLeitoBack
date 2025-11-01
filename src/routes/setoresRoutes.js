@@ -3,9 +3,9 @@ const { postSetor, getSetor, putSetor, deleteSetor } = require('../controllers/s
 
 const router = express.Router();
 
-router.post('/', postSetor);
-router.get('/', getSetor);
-router.put('/:id', putSetor);
-router.delete('/:id', deleteSetor);
+router.post('/', autenticarJWT, postSetor);
+router.get('/', autenticarJWT, getSetor);
+router.put('/:id', autenticarJWT, putSetor);
+router.delete('/:id', autenticarJWT, deleteSetor);
 
 module.exports = router;

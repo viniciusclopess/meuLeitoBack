@@ -6,31 +6,32 @@ const {
     postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,
     postPacienteComorbidade, getPacienteComorbidade, putPacienteComorbidade, deletePacienteComorbidade
 } = require('../controllers/joinsController');
+const { autenticarJWT } = require('../middlewares/authMiddleware')
 
 const router = express.Router();
 
-router.post('/alocacao/', postPacienteLeito);
-router.get('/alocacao/', getPacienteLeito);
-router.put('/alocacao/:id', putPacienteLeito);
+router.post('/alocacao/', autenticarJWT,  postPacienteLeito);
+router.get('/alocacao/', autenticarJWT,  getPacienteLeito);
+router.put('/alocacao/:id', autenticarJWT,  putPacienteLeito);
 
-router.post('/permissao/', postProfissionalPermissao);
-router.get('/permissao/', getProfissionalPermissao);
-router.put('/permissao/:id', putProfissionalPermissao);
-router.delete('/permissao/:id', deleteProfissionalPermissao);
+router.post('/permissao/', autenticarJWT,  postProfissionalPermissao);
+router.get('/permissao/', autenticarJWT,  getProfissionalPermissao);
+router.put('/permissao/:id', autenticarJWT,  putProfissionalPermissao);
+router.delete('/permissao/:id', autenticarJWT,  deleteProfissionalPermissao);
 
-router.post('/setorizacao/', postProfissionaisSetores);
-router.get('/setorizacao/', getProfissionaisSetores);
-router.put('/setorizacao/:id', putProfissionaisSetores);
-router.delete('/setorizacao/:id', deleteProfissionaisSetores);
+router.post('/setorizacao/', autenticarJWT,  postProfissionaisSetores);
+router.get('/setorizacao/', autenticarJWT,  getProfissionaisSetores);
+router.put('/setorizacao/:id', autenticarJWT,  putProfissionaisSetores);
+router.delete('/setorizacao/:id', autenticarJWT,  deleteProfissionaisSetores);
 
-router.post('/paciente-alergia/', postPacienteAlergia);
-router.get('/paciente-alergia/', getPacienteAlergia);
-router.put('/paciente-alergia/:id', putPacienteAlergia);
-router.delete('/paciente-alergia/:id', deletePacienteAlergia);
+router.post('/paciente-alergia/', autenticarJWT,  postPacienteAlergia);
+router.get('/paciente-alergia/', autenticarJWT,  getPacienteAlergia);
+router.put('/paciente-alergia/:id', autenticarJWT,  putPacienteAlergia);
+router.delete('/paciente-alergia/:id', autenticarJWT,  deletePacienteAlergia);
 
-router.post('/paciente-comorbidade/', postPacienteComorbidade);
-router.get('/paciente-comorbidade/', getPacienteComorbidade);
-router.put('/paciente-comorbidade/:id', putPacienteComorbidade);
-router.delete('/paciente-comorbidade/:id', deletePacienteComorbidade);
+router.post('/paciente-comorbidade/', autenticarJWT,  postPacienteComorbidade);
+router.get('/paciente-comorbidade/', autenticarJWT,  getPacienteComorbidade);
+router.put('/paciente-comorbidade/:id', autenticarJWT,  putPacienteComorbidade);
+router.delete('/paciente-comorbidade/:id', autenticarJWT,  deletePacienteComorbidade);
 
 module.exports = router;
