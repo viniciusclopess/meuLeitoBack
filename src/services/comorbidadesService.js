@@ -14,7 +14,7 @@ async function insertComorbidade(comorbidade) {
       'SELECT "Id" FROM "Comorbidades" WHERE "Nome" = $1',
       [comorbidade.id]
     );
-    comorbidadeDados = null
+    let comorbidadeDados = null
 
     // Não achou = Cria
     if (rComorbidade.rowCount === 0) {
