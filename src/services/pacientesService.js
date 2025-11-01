@@ -30,7 +30,7 @@ async function insertPaciente(paciente) {
     const rNovo = await client.query(
       `INSERT INTO "Pacientes" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Altura", "Peso", "TipoSanguineo")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING "Id"`,
+      RETURNING *`,
       [
         cpfLimpo,
         paciente.nome,
