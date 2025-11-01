@@ -12,7 +12,13 @@ const pool = new Pool({
   database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
-  ssl: useSsl ? { rejectUnauthorized: false } : false, // <<— CORRETO
+    ssl: {
+    // Aiven costuma exigir SSL. "require" aqui = sempre usar SSL.
+    require: true,
+    // se você NÃO tiver o certificado CA salvo localmente,
+    // deixa assim pra não falhar na verificação:
+    rejectUnauthorized: false,
+  }, // <<— CORRETO
   max: 15,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
