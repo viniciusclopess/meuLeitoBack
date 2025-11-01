@@ -1,5 +1,6 @@
 const express = require('express');
 const { postSetor, getSetor, putSetor, deleteSetor } = require('../controllers/setoresController');
+const { autenticarJWT } = require('../middlewares/authMiddleware')
 
 const router = express.Router();
 
