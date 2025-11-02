@@ -1,33 +1,67 @@
 const { pool } = require('../db/pool');
 
-async function insertChamado(chamado){
-    const client = await pool.connect();
-    if(!chamado.id_paciente_leito){
-      throw new Error("Campos obrigatórios!")
-    }
-    try {
-        await client.query('BEGIN');
-        const rChamado = await client.query(
-        `INSERT INTO "Chamados" ("IdPacienteLeito", "IdProfissional", "Prioridade", "Tipo", "Mensagem")
-        VALUES ( $1, $2, $3, $4, $5 ) 
-        RETURNING *;`, 
-        [
-            chamado.id_paciente_leito,
-            chamado.id_profissional,
-            chamado.prioridade ?? null,
-            chamado.tipo ?? null,
-            chamado.mensagem ?? null
-        ]);
+async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
+  const client = await pool.connect();
 
-        await client.query('COMMIT');
-        return rChamado.rows[0];
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Erro ao criar chamado:', err);
-        throw err;
-    } finally {
-        client.release();
-    }
+  if (!id_paciente_leito) {
+    throw new Error("Campos obrigatórios! (id_paciente_leito)");
+  }
+
+  // 👇 como a coluna "Tipo" é NOT NULL no banco, vamos forçar um default
+  const tipoDefault = "OUTROS"; // pode ser "PACIENTE", "SOLICITACAO", etc.
+
+  try {
+    await client.query("BEGIN");
+
+    const rChamado = await client.query(
+      `
+      INSERT INTO "Chamados" (
+        "IdPacienteLeito",
+        "IdProfissional",
+        "Prioridade",
+        "Tipo",
+        "Mensagem"
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+      `,
+      [
+        id_paciente_leito,
+        null, // começa sem profissional
+        prioridade ?? null,
+        tipoDefault, // 👈 nunca vai null agora
+        mensagem ?? null,
+      ]
+    );
+
+    await client.query("COMMIT");
+    return rChamado.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Erro ao criar chamado:", err);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// continua a função de aceitar/atribuir
+async function atribuirProfissionalAoChamado({ id_chamado, id_profissional }) {
+  if (!id_chamado || !id_profissional) {
+    throw new Error("id_chamado e id_profissional são obrigatórios");
+  }
+
+  const { rows } = await pool.query(
+    `
+    UPDATE "Chamados"
+    SET "IdProfissional" = $2
+    WHERE "Id" = $1
+    RETURNING *;
+    `,
+    [id_chamado, id_profissional]
+  );
+
+  return rows[0];
 }
 
 async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, status) {
@@ -75,7 +109,7 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
     params.push(id_profissional);
     paramIndex++;
   }
-  
+
   if (id_paciente) {
     if (params.length > 0) {
       query += ` AND "Pacientes"."Id" = $${paramIndex}`;
@@ -85,7 +119,7 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
     params.push(id_paciente);
     paramIndex++;
   }
-  
+
   if (id_leito) {
     if (params.length > 0) {
       query += ` AND "Leitos"."Id" = $${paramIndex}`;
@@ -128,7 +162,7 @@ async function acceptChamado(id_chamado, id_profissional) {
     `;
 
     const paramsUpdate = [
-      id_chamado, 
+      id_chamado,
       id_profissional
     ];
 
@@ -189,4 +223,4 @@ async function finishChamado(id_chamado) {
     client.release();
   }
 }
-module.exports = { insertChamado, selectChamado, acceptChamado, finishChamado }
+module.exports = { insertChamado, atribuirProfissionalAoChamado, selectChamado, acceptChamado, finishChamado }

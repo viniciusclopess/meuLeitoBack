@@ -1,7 +1,7 @@
 const { pool } = require('../db/pool');
 const bcrypt = require('bcrypt');
 
-const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+const cleanCPF = (cpf) => (cpf || '').replace(/\D/g, '');
 
 async function insertProfissional(profissional) {
   const client = await pool.connect();
@@ -20,14 +20,14 @@ async function insertProfissional(profissional) {
     }
 
     // Ajeitar CPF
-    const cpfLimpo = cleanCpf(profissional.cpf)
+    const cpfLimpo = cleanCPF(profissional.cpf)
     const saltRounds = 10
     const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
 
 
     // 1) Buscar profissional por CPF
     const rProfissional = await client.query(
-      'SELECT "Id" FROM "Profissionais" WHERE "Cpf" = $1',
+      'SELECT "Id" FROM "Profissionais" WHERE "CPF" = $1',
       [cpfLimpo]
     );
     if (rProfissional.rowCount > 0) {
@@ -39,7 +39,7 @@ async function insertProfissional(profissional) {
     }
 
     const rNovo = await client.query(
-      `INSERT INTO "Profissionais" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Senha", "NumeroDeRegistro", "IdPerfil")
+      `INSERT INTO "Profissionais" ("CPF", "Nome", "Nascimento", "Sexo", "Telefone", "Senha", "NumeroDeRegistro", "IdPerfil")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
@@ -68,28 +68,49 @@ async function insertProfissional(profissional) {
 }
 
 async function selectProfissional(nome) {
-  let query = 
-  `SELECT
+  let query = `
+    SELECT
       PR."Id", 
       PR."Nome", 
-      PR."Cpf", 
+      PR."CPF", 
       PR."Nascimento", 
       PR."Sexo", 
       PR."Telefone", 
       PR."NumeroDeRegistro",
-      PF."Id" as "IdPerfil", 
-      PF."Nome" as "Perfil",
-      ARRAY_AGG(ST."Nome") AS "Setores"
+      PR."Ativo",
+      PF."Id" AS "IdPerfil", 
+      PF."Nome" AS "Perfil",
+      COALESCE(
+        ARRAY_AGG(ST."Nome" ORDER BY ST."Nome")
+          FILTER (WHERE ST."Id" IS NOT NULL),
+        '{}'
+      ) AS "Setores"
     FROM "Profissionais" PR
     INNER JOIN "Perfis" PF ON PR."IdPerfil" = PF."Id"
     LEFT JOIN "ProfissionaisSetores" PS ON PR."Id" = PS."IdProfissional"
-    LEFT JOIN "Setores" ST ON ST."Id" = PS."IdSetor"`;
+    LEFT JOIN "Setores" ST ON ST."Id" = PS."IdSetor"
+  `;
+
   const params = [];
   if (nome) {
-    query += ' WHERE PR."Nome" ILIKE $1';
+    query += ` WHERE PR."Nome" ILIKE $1`;
     params.push(`%${nome}%`);
   }
-  query += ' GROUP BY PR."Id", PF."Nome"';
+
+  query += `
+    GROUP BY 
+      PR."Id", 
+      PR."Nome", 
+      PR."CPF", 
+      PR."Nascimento", 
+      PR."Sexo", 
+      PR."Telefone", 
+      PR."NumeroDeRegistro",
+      PR."Ativo",
+      PF."Id", 
+      PF."Nome"
+    ORDER BY PR."Nome";
+  `;
 
   const { rows } = await pool.query(query, params);
   return rows;
@@ -109,7 +130,7 @@ async function updateProfissional(id, profissional) {
     const { rows } = await client.query(
       `UPDATE "Profissionais"
         SET 
-          "Cpf"                 =  COALESCE($2, "Cpf"),
+          "CPF"                 =  COALESCE($2, "CPF"),
           "Nome"                =  COALESCE($3, "Nome"),
           "Nascimento"          =  COALESCE($4, "Nascimento"),
           "Sexo"                =  COALESCE($5, "Sexo"),

@@ -4,7 +4,7 @@ const { autenticarJWT } = require('../middlewares/authMiddleware')
 
 const router = express.Router();
 
-router.post('/', autenticarJWT, postChamado);
+router.post('/', postChamado);
 router.get('/', autenticarJWT, getChamado);
 router.put('/aceitar-chamado/:id_chamado', autenticarJWT, putAcceptChamado);
 router.put('/finalizar-chamado/:id_chamado', autenticarJWT, putFinishChamado);

@@ -6,7 +6,7 @@ async function findUserLogin(login) {
     `
     SELECT
       p."Id"                                     AS "id",
-      p."Cpf"                                    AS "login",
+      p."CPF"                                    AS "login",
       p."Senha"                                  AS "senha",
       p."Ativo"                                  AS "ativo",
       COALESCE(
@@ -19,8 +19,8 @@ async function findUserLogin(login) {
       ON pp."IdProfissional" = p."Id"
     LEFT JOIN "Permissoes" pm
       ON pm."Id" = pp."IdPermissao"
-    WHERE p."Cpf" = $1
-    GROUP BY p."Id", p."Cpf", p."Senha", p."Ativo"
+    WHERE p."CPF" = $1
+    GROUP BY p."Id", p."CPF", p."Senha", p."Ativo"
     LIMIT 1
     `,
     [login]
@@ -33,7 +33,7 @@ async function verifyPassword(plain, hashedOrPlain) {
   if (typeof hashedOrPlain === 'string' && hashedOrPlain.startsWith('$2')) {
     return bcrypt.compare(plain, hashedOrPlain); // senha com bcrypt
   }
-  return plain === hashedOrPlain; 
+  return plain === hashedOrPlain;
 }
 
 module.exports = {

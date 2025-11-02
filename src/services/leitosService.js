@@ -61,12 +61,24 @@ async function selectLeito(nome) {
   return rows;
 }
 
+async function selectPacienteLeito(id) {
+  let query = 'select p."Id" as ip_paciente, pl."IdLeito" , pl."DataEntrada" , p."Nome" , p."CPF" , p."Sexo", p."Nascimento", l."IdSetor", l."Nome"  as nome_leito from "PacienteLeito" pl inner join "Pacientes" p  on pl."IdPaciente" = p."Id" inner join "Leitos" l on pl."IdLeito" = l."Id"';
+  const params = [];
+  if (id) {
+    query += ' WHERE pl."IdLeito" = $1';
+    params.push(id);
+  }
+  const { rows } = await pool.query(query, params);
+  return rows;
+}
+
+
 async function updateLeito(id, leito) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     if (!id) throw new Error('Campos obrigatórios.');
-    
+
     const { rows } = await client.query(
       `UPDATE "Leitos"
          SET 
@@ -77,8 +89,8 @@ async function updateLeito(id, leito) {
        WHERE "Id" = $1
        RETURNING *`,
       [
-        id, 
-        leito.nome ?? null, 
+        id,
+        leito.nome ?? null,
         leito.id_setor ?? null,
         leito.status ?? null,
         leito.descricao ?? null
@@ -133,6 +145,7 @@ async function removeLeito(id) {
 module.exports = {
   insertLeito,
   selectLeito,
+  selectPacienteLeito,
   updateLeito,
   removeLeito
 };

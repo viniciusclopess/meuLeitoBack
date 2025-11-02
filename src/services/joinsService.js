@@ -70,11 +70,11 @@ async function insertPacienteLeito(alocacao) {
 }
 
 async function selectPacienteLeito(nome) {
-  let query = 
-  `SELECT
+  let query =
+    `SELECT
       "PacienteLeito"."Id", 
       "Pacientes"."Nome" AS "NomePaciente",
-      "Pacientes"."Cpf" AS "CpfPaciente,
+      "Pacientes"."CPF" AS "CPFPaciente,
       "Leitos"."Nome" AS "NomeLeito",
       "PacienteLeito"."DataEntrada",
       "PacienteLeito"."DataSaida"
@@ -86,8 +86,8 @@ async function selectPacienteLeito(nome) {
     `;
   const params = [];
   if (nome) {
-    query += 
-    ` WHERE 
+    query +=
+      ` WHERE 
         "PacienteLeito"."IdPaciente"      = "Pacientes"."Id"
         AND "PacienteLeito"."IdLeito"     = "Leitos"."Id" 
         AND "Pacientes"."Nome"            ILIKE $1
@@ -244,11 +244,11 @@ async function insertProfissionalPermissao(permissao) {
 }
 
 async function selectProfissionalPermissao(nome) {
-  let query = 
-  `SELECT
+  let query =
+    `SELECT
       "ProfissionalPermissao"."Id",
       "Profissionais"."Nome" AS "Nome",
-      "Profissionais"."Cpf" AS "Login",
+      "Profissionais"."CPF" AS "Login",
       "Permissoes"."Nome" AS "Permissao"
     FROM "ProfissionalPermissao"
     INNER JOIN "Profissionais" 
@@ -258,8 +258,8 @@ async function selectProfissionalPermissao(nome) {
     `;
   const params = [];
   if (nome) {
-    query += 
-    ` WHERE 
+    query +=
+      ` WHERE 
         "Profissionais"."Nome" ILIKE $1               
     `;
     params.push(`%${nome}%`);
@@ -400,11 +400,11 @@ async function insertProfissionaisSetores(setorizacao) {
 }
 
 async function selectProfissionaisSetores(nome) {
-  let query = 
-  `SELECT
+  let query =
+    `SELECT
       "ProfissionaisSetores"."Id",
       "Profissionais"."Nome" AS "Profissional",
-      "Profissionais"."Cpf" AS "CpfProfissional",
+      "Profissionais"."CPF" AS "CPFProfissional",
       "Setores"."Nome" AS "Setor"
     FROM "ProfissionaisSetores"
     INNER JOIN "Profissionais" 
@@ -414,8 +414,8 @@ async function selectProfissionaisSetores(nome) {
     `;
   const params = [];
   if (nome) {
-    query += 
-    ` WHERE 
+    query +=
+      ` WHERE 
         "Profissionais"."Nome" ILIKE $1               
     `;
     params.push(`%${nome}%`);
@@ -574,7 +574,7 @@ async function selectPacienteAlergia(nome) {
     SELECT
       "PacienteAlergia"."Id",
       "Pacientes"."Nome"  AS "Paciente",
-      "Pacientes"."Cpf" AS "CpfPaciente",
+      "Pacientes"."CPF" AS "CPFPaciente",
       "Alergias"."Nome"   AS "Alergia",
       "PacienteAlergia"."DataRegistro"
     FROM "PacienteAlergia"
@@ -754,7 +754,7 @@ async function selectPacienteComorbidade(nome) {
     SELECT
       "PacienteComorbidade"."Id",
       "Pacientes"."Nome"  AS "Paciente",
-      "Pacientes"."Cpf" AS "CpfPaciente",
+      "Pacientes"."CPF" AS "CPFPaciente",
       "Comorbidades"."Nome"   AS "Comorbidade",
       "PacienteComorbidade"."DataRegistro"
     FROM "PacienteComorbidade"
@@ -856,7 +856,7 @@ async function removePacienteComorbidade(id) {
     client.release();
   }
 }
-module.exports = { 
+module.exports = {
   insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
   insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
