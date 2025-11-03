@@ -6,10 +6,7 @@ async function postProfissional(req, res) {
     if (resultado.warning) {
       return res.status(409).json({
         ok: false,
-        message: resultado.warning,
-        data: {
-          profissionalId: resultado.profissionalId
-        }
+        message: resultado.warning
       });
     }
     return res.status(201).json({
