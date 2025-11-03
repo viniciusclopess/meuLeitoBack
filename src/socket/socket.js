@@ -70,18 +70,20 @@ function initSocket(server) {
     // --- PACIENTE ABRE CHAMADO ---
     socket.on(
       "novo_chamado",
-      async ({ id_paciente_leito, setorId, prioridade, mensagem }) => {
+      async ({
+        id_paciente_leito,
+        setorId,
+        prioridade,
+        mensagem,
+        nomePaciente,
+        nomeLeito,
+      }) => {
         if (!id_paciente_leito) {
-          socket.emit("erro_chamado", {
-            msg: "id_paciente_leito não informado",
-          });
+          socket.emit("erro_chamado", { msg: "id_paciente_leito não informado" });
           return;
         }
-
         if (!setorId) {
-          socket.emit("erro_chamado", {
-            msg: "setorId não informado",
-          });
+          socket.emit("erro_chamado", { msg: "setorId não informado" });
           return;
         }
 
@@ -94,19 +96,9 @@ function initSocket(server) {
             mensagem,
           });
 
-          console.log(
-            `📢 chamado ${chamado.Id} criado para ${roomName} (pacienteLeito=${id_paciente_leito})`
-          );
+          console.log(`📢 chamado ${chamado.Id} criado e enviado para ${roomName}`);
 
-          // LOGA QUEM ESTÁ NA ROOM ANTES DE EMITIR
-          const socketsDaRoom = io.sockets.adapter.rooms.get(roomName);
-          console.log(
-            "👥 [emit] sockets na room",
-            roomName,
-            socketsDaRoom ? [...socketsDaRoom] : "nenhum"
-          );
-
-          // 👇 AQUI É O PONTO: manda pra TODOS da room, inclusive quem emitiu
+          // envia o chamado para todas as enfermeiras do setor
           io.to(roomName).emit("receber_chamado", {
             chamadoId: chamado.Id,
             IdSetor: setorId,
@@ -114,22 +106,22 @@ function initSocket(server) {
             prioridade: prioridade ?? null,
             mensagem: mensagem ?? null,
             hora: new Date().toISOString(),
+            // 👇 agora vem o nome do paciente e do leito
+            NomePaciente: nomePaciente || null,
+            NomeLeito: nomeLeito || null,
           });
 
-          // confirma pro paciente
+          // confirma pro paciente que foi criado
           socket.emit("chamado_enviado", {
             chamadoId: chamado.Id,
-            msg: "Chamado criado e enviado para o setor.",
+            msg: "Chamado criado e enviado.",
           });
         } catch (err) {
           console.error("❌ erro ao inserir chamado:", err);
-          socket.emit("erro_chamado", {
-            msg: "Erro ao registrar o chamado.",
-          });
+          socket.emit("erro_chamado", { msg: "Erro ao registrar o chamado." });
         }
       }
     );
-
     // --- ENFERMEIRA ACEITA CHAMADO ---
     socket.on(
       "aceitar_chamado",

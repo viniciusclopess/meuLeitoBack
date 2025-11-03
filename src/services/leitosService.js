@@ -51,10 +51,10 @@ async function insertLeito(leito) {
  * Lê 1 leito pelo código
  */
 async function selectLeito(nome) {
-  let query = 'SELECT * FROM "Leitos"';
+  let query = 'SELECT l."Id" , l."Nome" ,l."Status" ,l."IdSetor" , s."Nome" as nome_setor FROM "Leitos" l inner join "Setores" s on l."IdSetor" = s."Id"';
   const params = [];
   if (nome) {
-    query += ' WHERE "Nome" ILIKE $1';
+    query += ' WHERE l."Nome" ILIKE $1';
     params.push(`%${nome}%`);
   }
   const { rows } = await pool.query(query, params);
