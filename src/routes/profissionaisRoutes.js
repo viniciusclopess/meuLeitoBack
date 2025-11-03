@@ -4,7 +4,7 @@ const { autenticarJWT } = require('../middlewares/authMiddleware')
 
 const router = express.Router();
 
-router.post('/', autenticarJWT,  postProfissional);
+router.post('/', autenticarJWT, postProfissional);
 router.get('/', autenticarJWT, getProfissional);
 router.put('/:id', autenticarJWT, putProfissional);
 router.delete('/:id', autenticarJWT, deleteProfissional);

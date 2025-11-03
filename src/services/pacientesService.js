@@ -1,6 +1,6 @@
 const { pool } = require('../db/pool');
 
-const cleanCpf = (cpf) => (cpf || '').replace(/\D/g, '');
+const cleanCPF = (cpf) => (cpf || '').replace(/\D/g, '');
 
 async function insertPaciente(paciente) {
   const client = await pool.connect();
@@ -12,11 +12,11 @@ async function insertPaciente(paciente) {
     }
 
     // Ajeitar CPF
-    const cpfLimpo = cleanCpf(paciente.cpf)
+    const cpfLimpo = cleanCPF(paciente.cpf)
 
     // 1) Buscar paciente por CPF
     const rPaciente = await client.query(
-      'SELECT "Id" FROM "Pacientes" WHERE "Cpf" = $1',
+      'SELECT "Id" FROM "Pacientes" WHERE "CPF" = $1',
       [cpfLimpo]
     );
     if (rPaciente.rowCount > 0) {
@@ -28,7 +28,7 @@ async function insertPaciente(paciente) {
     }
 
     const rNovo = await client.query(
-      `INSERT INTO "Pacientes" ("Cpf", "Nome", "Nascimento", "Sexo", "Telefone", "Altura", "Peso", "TipoSanguineo")
+      `INSERT INTO "Pacientes" ("CPF", "Nome", "Nascimento", "Sexo", "Telefone", "Altura", "Peso", "TipoSanguineo")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
@@ -43,10 +43,10 @@ async function insertPaciente(paciente) {
       ]
     );
     await client.query('COMMIT');
-    return{
+    return {
       ok: true,
       paciente: rNovo.rows[0]
-    } 
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -56,8 +56,8 @@ async function insertPaciente(paciente) {
 }
 
 async function selectPaciente(nome) {
-  let query = 
-  `SELECT 
+  let query =
+    `SELECT 
       *
     FROM "Pacientes"`;
   const params = [];
@@ -73,13 +73,13 @@ async function updatePaciente(id, paciente) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     if (!id) throw new Error('Id do paciente é obrigatório.');
 
     const { rows } = await client.query(
       `UPDATE "Pacientes"
         SET 
-          "Cpf"             =  COALESCE($2, "Cpf"),
+          "CPF"             =  COALESCE($2, "CPF"),
           "Nome"            =  COALESCE($3, "Nome"),
           "Nascimento"      =  COALESCE($4, "Nascimento"),
           "Sexo"            =  COALESCE($5, "Sexo"),
@@ -90,11 +90,11 @@ async function updatePaciente(id, paciente) {
         WHERE "Id" = $1
       RETURNING *`,
       [
-        id, 
-        paciente.cpf ?? null, 
-        paciente.nome ?? null, 
-        paciente.nascimento ?? null, 
-        paciente.sexo ?? null, 
+        id,
+        paciente.cpf ?? null,
+        paciente.nome ?? null,
+        paciente.nascimento ?? null,
+        paciente.sexo ?? null,
         paciente.telefone ?? null,
         paciente.altura ?? null,
         paciente.peso ?? null,
