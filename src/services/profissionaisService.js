@@ -4,44 +4,41 @@ const bcrypt = require('bcrypt');
 const cleanCPF = (cpf) => (cpf || '').replace(/\D/g, '');
 
 async function insertProfissional(profissional) {
+  // valida antes de pegar conexão
+  if (
+    !profissional?.cpf ||
+    !profissional?.nome ||
+    !profissional?.nascimento ||
+    !profissional?.sexo ||
+    !profissional?.senha ||
+    !profissional?.id_perfil
+  ) {
+    throw new Error('Campos obrigatórios!');
+  }
+
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
 
-    if (
-      !profissional?.cpf ||
-      !profissional?.nome ||
-      !profissional?.nascimento ||
-      !profissional?.sexo ||
-      !profissional?.senha ||
-      !profissional?.id_perfil
-    ) {
-      throw new Error('Campos obrigatórios!');
-    }
-
+    const cpfLimpo = (profissional.cpf || profissional.CPF || '').replace(/\D/g, '');
     // Ajeitar CPF
-    const cpfLimpo = cleanCPF(profissional.cpf)
     const saltRounds = 10
     const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
 
+    // arrays opcionais
+    const setores = Array.isArray(profissional.setores) ? profissional.setores : [];
+    const permissoes = Array.isArray(profissional.permissoes) ? profissional.permissoes : [];
 
-    // 1) Buscar profissional por CPF
-    const rProfissional = await client.query(
-      'SELECT "Id" FROM "Profissionais" WHERE "CPF" = $1',
-      [cpfLimpo]
-    );
-    if (rProfissional.rowCount > 0) {
-      await client.query('ROLLBACK');
-      return {
-        warning: 'Esse profissional já foi cadastrado anteriormente!',
-        profissionalId: rProfissional.rows[0].Id
-      };
-    }
-
+    // 1) insere o profissional
     const rNovo = await client.query(
-      `INSERT INTO "Profissionais" ("CPF", "Nome", "Nascimento", "Sexo", "Telefone", "Senha", "NumeroDeRegistro", "IdPerfil")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *`,
+      `
+      INSERT INTO "Profissionais"
+        ("CPF", "Nome", "Nascimento", "Sexo", "Telefone", "Senha", "NumeroDeRegistro", "IdPerfil")
+      VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING "Id"
+      `,
       [
         cpfLimpo,
         profissional.nome,
@@ -54,11 +51,46 @@ async function insertProfissional(profissional) {
       ]
     );
 
-    await client.query('COMMIT');
-    return {
-      ok: true,
-      profissional: rNovo.rows[0]
+    const novoId = rNovo.rows[0].Id;
+
+    // 2) insere os setores (se vieram)
+    if (setores.length > 0) {
+      const valuesSetores = setores
+        .map((_, idx) => `($1, $${idx + 2})`)
+        .join(', ');
+
+      await client.query(
+        `
+        INSERT INTO "ProfissionaisSetores" ("IdProfissional", "IdSetor")
+        VALUES ${valuesSetores}
+        `,
+        [novoId, ...setores]
+      );
     }
+
+    // 3) insere as permissões (se vieram)
+    if (permissoes.length > 0) {
+      const valuesPerms = permissoes
+        .map((_, idx) => `($1, $${idx + 2})`)
+        .join(', ');
+
+      await client.query(
+        `
+        INSERT INTO "ProfissionalPermissao" ("IdProfissional", "IdPermissao")
+        VALUES ${valuesPerms}
+        `,
+        [novoId, ...permissoes]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    return {
+      id: novoId,
+      ...profissional,
+      setores,
+      permissoes
+    };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
