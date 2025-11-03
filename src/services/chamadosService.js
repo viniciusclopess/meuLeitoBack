@@ -146,6 +146,68 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
   return rows;
 }
 
+async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, status) {
+  let query = `
+  SELECT 
+    "Chamados"."Id",
+    "PacienteLeito"."Id" AS "IdPacienteLeito",
+    "Pacientes"."Id" AS "IdPaciente",
+    "Pacientes"."Nome" AS "Paciente",
+    "Leitos"."Id" AS "IdLeito",
+    "Leitos"."Nome" AS "Leito",
+    "Profissionais"."Nome" AS "Profissional",
+    "Chamados"."Status",
+    "Chamados"."Tipo",
+    "Chamados"."Prioridade",
+    "Chamados"."Mensagem",
+    "Chamados"."DataCriacao",
+    "Chamados"."DataFim"
+  FROM "Chamados"
+  INNER JOIN "PacienteLeito" 
+    ON "Chamados"."IdPacienteLeito" = "PacienteLeito"."Id"
+  INNER JOIN "Pacientes"
+    ON "PacienteLeito"."IdPaciente" = "Pacientes"."Id"
+  LEFT JOIN "Profissionais"
+    ON "Chamados"."IdProfissional" = "Profissionais"."Id"
+  INNER JOIN "Leitos"
+    ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
+  `;
+
+  const params = [];
+  let paramIndex = 1;
+
+  // Filtros opcionais
+  if (id_paciente_leito) {
+    query += ` WHERE "Chamados"."IdPacienteLeito" = $${paramIndex++}`;
+    params.push(id_paciente_leito);
+  }
+
+  if (id_profissional) {
+    query += params.length ? ` AND "Chamados"."IdProfissional" = $${paramIndex++}` : ` WHERE "Chamados"."IdProfissional" = $${paramIndex++}`;
+    params.push(id_profissional);
+  }
+
+  if (id_paciente) {
+    query += params.length ? ` AND "Pacientes"."Id" = $${paramIndex++}` : ` WHERE "Pacientes"."Id" = $${paramIndex++}`;
+    params.push(id_paciente);
+  }
+
+  if (id_leito) {
+    query += params.length ? ` AND "Leitos"."Id" = $${paramIndex++}` : ` WHERE "Leitos"."Id" = $${paramIndex++}`;
+    params.push(id_leito);
+  }
+
+  if (status) {
+    query += params.length ? ` AND "Chamados"."Status" = $${paramIndex++}` : ` WHERE "Chamados"."Status" = $${paramIndex++}`;
+    params.push(status);
+  }
+
+  query += ' ORDER BY "Chamados"."DataCriacao" DESC LIMIT 1';
+
+  const { rows } = await pool.query(query, params);
+  return rows[0] || null;
+}
+
 async function acceptChamado(id_chamado, id_profissional) {
   const client = await pool.connect();
   try {
@@ -223,4 +285,4 @@ async function finishChamado(id_chamado) {
     client.release();
   }
 }
-module.exports = { insertChamado, atribuirProfissionalAoChamado, selectChamado, acceptChamado, finishChamado }
+module.exports = { insertChamado, selectUltimoChamado, atribuirProfissionalAoChamado, selectChamado, acceptChamado, finishChamado }
