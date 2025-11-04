@@ -6,7 +6,7 @@ const {
     postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,
     postPacienteComorbidade, getPacienteComorbidade, putPacienteComorbidade, deletePacienteComorbidade
 } = require('../controllers/joinsController');
-const { autenticarJWT } = require('../middlewares/authMiddleware')
+//const { autenticarJWT } = require('../middlewares/authMiddleware')
 
 const router = express.Router();
 

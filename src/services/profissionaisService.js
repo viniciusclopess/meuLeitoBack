@@ -21,7 +21,7 @@ async function insertProfissional(profissional) {
   try {
     await client.query('BEGIN');
 
-    const cpfLimpo = (profissional.cpf || profissional.CPF || '').replace(/\D/g, '');
+    const cpfLimpo = cleanCPF(profissional.cpf);
     // Ajeitar CPF
     const saltRounds = 10
     const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);

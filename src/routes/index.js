@@ -30,7 +30,6 @@ router.use('/permissoes',       permissoes);
 
 router.get('/health', (_req, res) => res.json({ ok: true }));
 
-// nova rota: saúde do DB
 router.get('/health/db', async (_req, res) => {
   try {
     const { rows } = await pool.query('select now() as ts');
