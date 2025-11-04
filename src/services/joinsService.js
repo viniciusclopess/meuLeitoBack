@@ -73,9 +73,13 @@ async function selectPacienteLeito(nome) {
   let query =
     `SELECT
       "PacienteLeito"."Id", 
-      "Pacientes"."Nome" AS "NomePaciente",
-      "Pacientes"."CPF" AS "CPFPaciente,
-      "Leitos"."Nome" AS "NomeLeito",
+      "Pacientes"."Id"    AS "IdPaciente",
+      "Pacientes"."Nome"  AS "NomePaciente",
+      "Pacientes"."CPF"   AS "CPFPaciente",
+      "Leitos"."Id"       AS "IdLeito",
+      "Leitos"."Nome"     AS "NomeLeito",
+      "Setores"."Id"      AS "IdSetor",
+      "Setores"."Nome"    AS "NomeSetor",
       "PacienteLeito"."DataEntrada",
       "PacienteLeito"."DataSaida"
     FROM "PacienteLeito"
@@ -83,6 +87,8 @@ async function selectPacienteLeito(nome) {
       ON "PacienteLeito"."IdPaciente" = "Pacientes"."Id"
     INNER JOIN "Leitos"
       ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
+    INNER JOIN "Setores"
+      ON "Leitos"."IdSetor" = "Setores"."Id"
     `;
   const params = [];
   if (nome) {
