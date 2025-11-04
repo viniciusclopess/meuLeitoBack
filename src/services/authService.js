@@ -5,23 +5,22 @@ async function findUserLogin(login) {
   const { rows } = await pool.query(
     `
     SELECT
-      p."Id"                                     AS "id",
-      p."CPF"                                    AS "login",
-      p."Senha"                                  AS "senha",
-      p."Ativo"                                  AS "ativo",
-      COALESCE(
-        ARRAY_AGG(pm."Nome" ORDER BY pm."Nome")
-        FILTER (WHERE pm."Nome" IS NOT NULL),
-        '{}'
-      ) AS "permissoes"
+      p."Id"      AS "id",
+      p."CPF"     AS "login",
+      p."Senha"   AS "senha",
+      p."Ativo"   AS "ativo",
+      pf."Nome"   AS "perfil",  -- <- aqui
+      COALESCE( ARRAY_AGG(pm."Nome" ORDER BY pm."Nome") FILTER (WHERE pm."Nome" IS NOT NULL), '{}' ) AS "permissoes"
     FROM "Profissionais" p
     LEFT JOIN "ProfissionalPermissao" pp
       ON pp."IdProfissional" = p."Id"
     LEFT JOIN "Permissoes" pm
       ON pm."Id" = pp."IdPermissao"
+    INNER JOIN "Perfis" pf
+      ON pf."Id" = p."IdPerfil"
     WHERE p."CPF" = $1
-    GROUP BY p."Id", p."CPF", p."Senha", p."Ativo"
-    LIMIT 1
+    GROUP BY p."Id", p."CPF", p."Senha", p."Ativo", pf."Nome"
+    LIMIT 1;
     `,
     [login]
   );
