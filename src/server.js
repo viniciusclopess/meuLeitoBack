@@ -5,7 +5,7 @@ const app = require('./app');
 const pool = require('./db/pool');
 const { initSocket } = require("./socket/socket");
 
-const PORT = process.env.PORT || 3500;
+const PORT = process.env.PORT || 8080;
 
 // cria o servidor HTTP
 const server = http.createServer(app);
