@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken');
+require('dotenv').config()
 const { findUserLogin, verifyPassword } = require('../services/authService');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
 async function fazerLogin(req, res) {
   try {
@@ -38,12 +36,13 @@ async function fazerLogin(req, res) {
     const payload = {
       sub: user.id,                // subject = id do usuário
       login: user.login,
-      permissoes: user.permissoes, // array de permissões
+      perfil: user.perfil,
+      permissoes: user.permissoes // array de permissões
     };
 
     // 4) Gerar token
-    const token = jwt.sign(payload, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
     // 5) Resposta
@@ -54,6 +53,7 @@ async function fazerLogin(req, res) {
       usuario: {
         id: user.id,
         login: user.login,
+        perfil: user.perfil,
         permissoes: user.permissoes
       }
     });
