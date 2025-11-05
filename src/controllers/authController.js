@@ -37,6 +37,7 @@ async function fazerLogin(req, res) {
       sub: user.id,                // subject = id do usuário
       login: user.login,
       perfil: user.perfil,
+      setores: user.setores,
       permissoes: user.permissoes // array de permissões
     };
 
@@ -54,6 +55,7 @@ async function fazerLogin(req, res) {
         id: user.id,
         login: user.login,
         perfil: user.perfil,
+        setores: user.setores,
         permissoes: user.permissoes
       }
     });
