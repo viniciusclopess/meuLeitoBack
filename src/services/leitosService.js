@@ -47,31 +47,27 @@ async function insertLeito(leito) {
   }
 }
 
-/**
- * Lê 1 leito pelo código
- */
 async function selectLeito(nome) {
-  let query = 'SELECT l."Id" , l."Nome" ,l."Status" ,l."IdSetor" , s."Nome" as nome_setor FROM "Leitos" l inner join "Setores" s on l."IdSetor" = s."Id"';
+  let query = 
+  `SELECT 
+    "Leitos"."Id", 
+    "Leitos"."Nome", 
+    "Leitos"."Status",
+    "Leitos"."IdSetor", 
+    "Setores"."Nome" as "NomeSetor" 
+  FROM 
+    "Leitos" 
+  INNER JOIN "Setores" 
+    ON "Leitos"."IdSetor" = "Setores"."Id"
+  `;
   const params = [];
   if (nome) {
-    query += ' WHERE l."Nome" ILIKE $1';
+    query += ' WHERE "Leitos"."Nome" ILIKE $1';
     params.push(`%${nome}%`);
   }
   const { rows } = await pool.query(query, params);
   return rows;
 }
-
-async function selectPacienteLeito(id) {
-  let query = 'select p."Id" as ip_paciente, pl."IdLeito" , pl."DataEntrada" , p."Nome" , p."CPF" , p."Sexo", p."Nascimento", l."IdSetor", l."Nome"  as nome_leito from "PacienteLeito" pl inner join "Pacientes" p  on pl."IdPaciente" = p."Id" inner join "Leitos" l on pl."IdLeito" = l."Id"';
-  const params = [];
-  if (id) {
-    query += ' WHERE pl."IdLeito" = $1';
-    params.push(id);
-  }
-  const { rows } = await pool.query(query, params);
-  return rows;
-}
-
 
 async function updateLeito(id, leito) {
   const client = await pool.connect();
@@ -145,7 +141,6 @@ async function removeLeito(id) {
 module.exports = {
   insertLeito,
   selectLeito,
-  selectPacienteLeito,
   updateLeito,
   removeLeito
 };

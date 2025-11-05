@@ -4,6 +4,7 @@ const { selectProfissionaisSetoresSocket } = require("../services/socketService"
 const {
   insertChamado,
   atribuirProfissionalAoChamado,
+  acceptChamado,
 } = require("../services/chamadosService");
 
 let io;
@@ -134,7 +135,7 @@ function initSocket(server) {
         }
 
         try {
-          const chamadoAtualizado = await atribuirProfissionalAoChamado({
+          const chamadoAtualizado = await acceptChamado({
             id_chamado: chamadoId,
             id_profissional: idProfissional,
           });
