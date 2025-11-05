@@ -47,24 +47,37 @@ async function insertLeito(leito) {
   }
 }
 
-async function selectLeito(nome) {
-  let query = 
-  `SELECT 
-    "Leitos"."Id", 
-    "Leitos"."Nome", 
-    "Leitos"."Status",
-    "Leitos"."IdSetor", 
-    "Setores"."Nome" as "NomeSetor" 
-  FROM 
-    "Leitos" 
-  INNER JOIN "Setores" 
-    ON "Leitos"."IdSetor" = "Setores"."Id"
+async function selectLeito(nome, nome_setor, id_setor) {
+  let query = `
+    SELECT 
+      "Leitos"."Id", 
+      "Leitos"."Nome", 
+      "Leitos"."Status",
+      "Setores"."Id" AS "IdSetor",
+      "Setores"."Nome" AS "NomeSetor"
+    FROM "Leitos"
+    INNER JOIN "Setores" ON "Leitos"."IdSetor" = "Setores"."Id"
   `;
+
+  const conditions = [];
   const params = [];
+
   if (nome) {
-    query += ' WHERE "Leitos"."Nome" ILIKE $1';
     params.push(`%${nome}%`);
+    conditions.push(`"Leitos"."Nome" ILIKE $${params.length}`);
   }
+
+  if (nome_setor) {
+    params.push(`%${nome_setor}%`);
+    conditions.push(`"Setores"."Nome" ILIKE $${params.length}`);
+  }
+
+  if (conditions.length) {
+    query += " WHERE " + conditions.join(" AND ");
+  }
+
+  query += ` ORDER BY "Setores"."Nome", "Leitos"."Nome"`;
+
   const { rows } = await pool.query(query, params);
   return rows;
 }

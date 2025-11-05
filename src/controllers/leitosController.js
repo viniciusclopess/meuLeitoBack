@@ -1,4 +1,4 @@
-const { insertLeito, selectLeito, selectPacienteLeito, updateLeito, removeLeito } = require('../services/leitosService');
+const { insertLeito, selectLeito,  updateLeito, removeLeito } = require('../services/leitosService');
 
 async function postLeito(req, res) {
   try {
@@ -29,43 +29,24 @@ async function postLeito(req, res) {
 
 async function getLeito(req, res) {
   try {
-    const { nome } = req.query;
-    const resultado = await selectLeito(nome);
-    if (!resultado) return res.status(404).json({
-      message: "Leito não encontrado."
-    });
+    const { nome, nome_setor } = req.query;
+    const resultado = await selectLeito(nome, nome_setor);
+    if (!resultado || resultado.length === 0) {
+      return res.status(404).json({ message: "Leito não encontrado." });
+    }
     return res.status(200).json({
       message: "Leitos encontrados:",
       data: resultado
-    })
+    });
   } catch (err) {
     console.error(err);
     return res.status(400).json({
-      message: 'Erro ao buscar leito.',
+      message: "Erro ao buscar leito.",
       error: err.message
     });
   }
 }
 
-async function getPacienteLeito(req, res) {
-  try {
-    const { id } = req.params;
-    const resultado = await selectPacienteLeito(id);
-    if (!resultado) return res.status(404).json({
-      message: "Paciente não encontrado."
-    });
-    return res.status(200).json({
-      message: "Paciente encontrados:",
-      data: resultado
-    })
-  } catch (err) {
-    console.error(err);
-    return res.status(400).json({
-      message: 'Erro ao buscar paciente.',
-      error: err.message
-    });
-  }
-}
 
 async function putLeito(req, res) {
   try {
@@ -107,4 +88,4 @@ async function deleteLeito(req, res) {
   }
 }
 
-module.exports = { postLeito, getLeito, getPacienteLeito, putLeito, deleteLeito };
+module.exports = { postLeito, getLeito, putLeito, deleteLeito };
