@@ -69,7 +69,7 @@ async function insertPacienteLeito(alocacao) {
   }
 }
 
-async function selectPacienteLeito(nome) {
+async function selectPacienteLeito(id_leito) {
   let query =
     `SELECT
       "PacienteLeito"."Id", 
@@ -91,16 +91,13 @@ async function selectPacienteLeito(nome) {
       ON "Leitos"."IdSetor" = "Setores"."Id"
     `;
   const params = [];
-  if (nome) {
+  if (id_leito) {
     query +=
       ` WHERE 
-        "PacienteLeito"."IdPaciente"      = "Pacientes"."Id"
-        AND "PacienteLeito"."IdLeito"     = "Leitos"."Id" 
-        AND "Pacientes"."Nome"            ILIKE $1
-        AND "Leitos"."Status"             = 'Ocupado'
+        "PacienteLeito"."IdLeito"         = $1
         AND "PacienteLeito"."DataSaida"   IS NULL                  
     `;
-    params.push(`%${nome}%`);
+    params.push(id_leito);
   }
   const { rows } = await pool.query(query, params);
   return rows;

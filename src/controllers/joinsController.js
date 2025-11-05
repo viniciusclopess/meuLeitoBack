@@ -33,8 +33,8 @@ async function postPacienteLeito(req, res) {
 
 async function getPacienteLeito(req, res){
   try{
-    const { nome } = req.query;
-    const resultado = await selectPacienteLeito(nome);
+    const { id_leito } = req.query;
+    const resultado = await selectPacienteLeito(id_leito);
     if(!resultado) return res.status(404).json({
       message: "Alocação não encontrada."
     });
