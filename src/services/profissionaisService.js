@@ -11,7 +11,8 @@ async function insertProfissional(profissional) {
     !profissional?.nascimento ||
     !profissional?.sexo ||
     !profissional?.senha ||
-    !profissional?.id_perfil
+    !profissional?.id_perfil ||
+    !profissional?.setores
   ) {
     throw new Error('Campos obrigatórios!');
   }
@@ -113,9 +114,11 @@ async function selectProfissional(nome) {
       PF."Id" AS "IdPerfil", 
       PF."Nome" AS "Perfil",
       COALESCE(
-        ARRAY_AGG(ST."Nome" ORDER BY ST."Nome")
-          FILTER (WHERE ST."Id" IS NOT NULL),
-        '{}'
+        JSON_AGG(
+          JSON_BUILD_OBJECT('Id', ST."Id", 'Nome', ST."Nome")
+          ORDER BY ST."Id"
+        ) FILTER (WHERE ST."Id" IS NOT NULL),
+        '[]'::json
       ) AS "Setores"
     FROM "Profissionais" PR
     INNER JOIN "Perfis" PF ON PR."IdPerfil" = PF."Id"
@@ -149,28 +152,24 @@ async function selectProfissional(nome) {
 }
 
 async function updateProfissional(id, profissional) {
+  if (!id) throw new Error('Id do profissional é obrigatório.');
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
 
-    if (!id) throw new Error('Id do profissional é obrigatório.');
-    if (profissional.senha) {
-      const saltRounds = 10;
-      const senhaHash = await bcrypt.hash(profissional.senha, saltRounds);
-    }
-
+    // Atualiza dados principais
     const { rows } = await client.query(
-      `UPDATE "Profissionais"
-        SET 
-          "CPF"                 =  COALESCE($2, "CPF"),
-          "Nome"                =  COALESCE($3, "Nome"),
-          "Nascimento"          =  COALESCE($4, "Nascimento"),
-          "Sexo"                =  COALESCE($5, "Sexo"),
-          "Telefone"            =  COALESCE($6, "Telefone"),
-          "NumeroDeRegistro"    =  COALESCE($7, "NumeroDeRegistro"),
-          "IdPerfil"            =  COALESCE($8, "IdPerfil")
-        WHERE "Id" = $1
-      RETURNING *`,
+      `UPDATE "Profissionais" SET
+          "CPF"                   = COALESCE($2, "CPF"),
+          "Nome"                  = COALESCE($3, "Nome"),
+          "Nascimento"            = COALESCE($4, "Nascimento"),
+          "Sexo"                  = COALESCE($5, "Sexo"),
+          "Telefone"              = COALESCE($6, "Telefone"),
+          "NumeroDeRegistro"      = COALESCE($7, "NumeroDeRegistro"),
+          "IdPerfil"              = COALESCE($8, "IdPerfil")
+       WHERE "Id" = $1
+       RETURNING *`,
       [
         id,
         profissional.cpf ?? null,
@@ -179,13 +178,28 @@ async function updateProfissional(id, profissional) {
         profissional.sexo ?? null,
         profissional.telefone ?? null,
         profissional.numero_registro ?? null,
-        profissional.id_perfil ?? null
+        profissional.id_perfil ?? null,
       ]
     );
 
+    if (rows.length === 0) throw new Error('Profissional não encontrado.');
+
+    // Atualiza setores (remove todos e insere os novos)
+    if (Array.isArray(profissional.setores)) {
+      await client.query(`DELETE FROM "ProfissionaisSetores" WHERE "IdProfissional" = $1`, [id]);
+
+      if (profissional.setores.length > 0) {
+        await client.query(
+          `INSERT INTO "ProfissionaisSetores" ("IdProfissional", "IdSetor")
+           SELECT $1, unnest($2::int[])`,
+          [id, profissional.setores]
+        );
+      }
+    }
+
     await client.query('COMMIT');
-    if (rows.length === 0) return null;
-    return rows[0];
+    return { ...rows[0], Setores: profissional.setores ?? [] };
+
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
