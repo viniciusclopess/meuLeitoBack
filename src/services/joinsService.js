@@ -87,13 +87,15 @@ async function selectPacienteLeito(id_leito) {
   let query =
     `SELECT
       "PacienteLeito"."Id", 
-      "Pacientes"."Id"    AS "IdPaciente",
-      "Pacientes"."Nome"  AS "NomePaciente",
-      "Pacientes"."CPF"   AS "CPFPaciente",
-      "Leitos"."Id"       AS "IdLeito",
-      "Leitos"."Nome"     AS "NomeLeito",
-      "Setores"."Id"      AS "IdSetor",
-      "Setores"."Nome"    AS "NomeSetor",
+      "Pacientes"."Id"                AS "IdPaciente",
+      "Pacientes"."Nome"              AS "NomePaciente",
+      "Pacientes"."Nascimento"        AS "NascimentoPaciente",
+      "Pacientes"."Sexo"              AS "SexoPaciente",
+      "Pacientes"."CPF"               AS "CPFPaciente",
+      "Leitos"."Id"                   AS "IdLeito",
+      "Leitos"."Nome"                 AS "NomeLeito",
+      "Setores"."Id"                  AS "IdSetor",
+      "Setores"."Nome"                AS "NomeSetor",
       "PacienteLeito"."DataEntrada",
       "PacienteLeito"."DataSaida"
     FROM "PacienteLeito"
