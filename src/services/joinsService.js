@@ -9,56 +9,70 @@ async function insertPacienteLeito(alocacao) {
       throw new Error('Campos obrigatórios.');
     }
 
-    const rVerificacao = await client.query(
+    // 1) Paciente já alocado em algum leito sem DataSaida?
+    const rJaAlocado = await client.query(
       `
-      SELECT 
-        "Id",
-        "Status"
+      SELECT PL."Id", PL."IdLeito", L."Nome" AS "NomeLeito"
+      FROM "PacienteLeito" PL
+      JOIN "Leitos" L ON L."Id" = PL."IdLeito"
+      WHERE PL."IdPaciente" = $1
+        AND PL."DataSaida" IS NULL
+      LIMIT 1
+      `,
+      [alocacao.id_paciente]
+    );
+
+    if (rJaAlocado.rowCount > 0) {
+      await client.query('ROLLBACK');
+      const row = rJaAlocado.rows[0];
+      return {
+        ok: false,
+        warning: `Paciente já está alocado no leito ${row.NomeLeito} (Id ${row.IdLeito}).`
+      };
+    }
+
+    // 2) Leito está Livre? (trava a linha do leito)
+    const rLeito = await client.query(
+      `
+      SELECT "Id", "Status"
       FROM "Leitos"
-      WHERE
-        "Id" = $1
-        AND "Status" = 'Livre'
+      WHERE "Id" = $1
+      FOR UPDATE
       `,
       [alocacao.id_leito]
     );
 
-    if (rVerificacao.rowCount === 0) {
+    if (rLeito.rowCount === 0) {
       await client.query('ROLLBACK');
-      return {
-        ok: false,
-        warning: 'Esse leito está indisponível.'
-      };
+      return { ok: false, warning: 'Leito não encontrado.' };
+    }
+    if (rLeito.rows[0].Status !== 'Livre') {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Esse leito está indisponível.' };
     }
 
+    // 3) Insere alocação
     const rNovo = await client.query(
       `
       INSERT INTO "PacienteLeito" ("IdPaciente", "IdLeito")
       VALUES ($1, $2)
       RETURNING *
       `,
-      [
-        alocacao.id_paciente,
-        alocacao.id_leito
-      ]
+      [alocacao.id_paciente, alocacao.id_leito]
     );
 
-    // 4. marcar o leito como Ocupado
+    // 4) Atualiza status do leito
     await client.query(
       `
       UPDATE "Leitos"
-        SET "Status" = 'Ocupado'
+      SET "Status" = 'Ocupado'
       WHERE "Id" = $1
       `,
       [alocacao.id_leito]
     );
 
-    // 5. commit final
     await client.query('COMMIT');
-
-    return {
-      ok: true,
-      pacienteLeito: rNovo.rows[0]
-    };
+    return { ok: true, pacienteLeito: rNovo.rows[0] };
 
   } catch (err) {
     await client.query('ROLLBACK');
@@ -141,24 +155,6 @@ async function updatePacienteLeito(id, alocacao) {
       return null;
     }
 
-    const leitoFinalId = alocacaoRows[0].IdLeito;
-
-    if (alocacao.status != null) {
-      const rUpdateLeito = `
-        UPDATE "Leitos"
-        SET "Status" = $2
-        WHERE "Id" = $1
-        RETURNING "Id", "Nome", "Status"
-      `;
-
-      const paramsLeito = [
-        leitoFinalId,
-        alocacao.status
-      ];
-
-      await client.query(rUpdateLeito, paramsLeito);
-    }
-
     const selectSQL = `
       SELECT 
         "PacienteLeito"."Id"            AS "AlocacaoId",
@@ -179,6 +175,81 @@ async function updatePacienteLeito(id, alocacao) {
 
     await client.query('COMMIT');
     return finalRows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function updateLiberarPacienteLeito(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    if (!id) throw new Error('Id é obrigatório.');
+
+    // 1) Finaliza a alocação (somente se ainda não tiver DataSaida)
+    const { rows: liberacaoRows } = await client.query(
+      `
+      UPDATE "PacienteLeito"
+      SET "DataSaida" = NOW()
+      WHERE "Id" = $1
+        AND "DataSaida" IS NULL
+      RETURNING
+        "Id",
+        "IdPaciente",
+        "IdLeito",
+        "DataEntrada",
+        "DataSaida"
+      `,
+      [id]
+    );
+
+    if (liberacaoRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const { IdLeito } = liberacaoRows[0];
+
+    // 2) Libera o leito
+    const { rows: leitoRows } = await client.query(
+      `
+      UPDATE "Leitos"
+      SET "Status" = 'Livre'
+      WHERE "Id" = $1
+      RETURNING "Id", "Nome", "Status"
+      `,
+      [IdLeito]
+    );
+
+    if (leitoRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    // 3) Seleciona dados finais para retorno
+    const { rows: finalRows } = await client.query(
+      `
+      SELECT 
+        PL."Id"                  AS "AlocacaoId",
+        P."Nome"                 AS "PacienteNome",
+        L."Nome"                 AS "LeitoNome",
+        L."Status"               AS "LeitoStatus",
+        PL."DataEntrada",
+        PL."DataSaida"
+      FROM "PacienteLeito" PL
+      JOIN "Pacientes" P ON P."Id" = PL."IdPaciente"
+      JOIN "Leitos"    L ON L."Id" = PL."IdLeito"
+      WHERE PL."Id" = $1
+      `,
+      [id]
+    );
+
+    await client.query('COMMIT');
+    return finalRows[0] || null;
 
   } catch (err) {
     await client.query('ROLLBACK');
@@ -860,7 +931,7 @@ async function removePacienteComorbidade(id) {
   }
 }
 module.exports = {
-  insertPacienteLeito, selectPacienteLeito, updatePacienteLeito,
+  insertPacienteLeito, selectPacienteLeito, updatePacienteLeito, updateLiberarPacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
   insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
   insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia,

@@ -1,6 +1,6 @@
 const express = require('express');
 const { 
-    postPacienteLeito, getPacienteLeito, putPacienteLeito, 
+    postPacienteLeito, getPacienteLeito, putPacienteLeito, putLiberarPacienteLeito, 
     postProfissionalPermissao, getProfissionalPermissao, putProfissionalPermissao, deleteProfissionalPermissao,
     postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores,
     postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,
@@ -13,6 +13,7 @@ const router = express.Router();
 router.post('/alocacao/',   postPacienteLeito);
 router.get('/alocacao/',   getPacienteLeito);
 router.put('/alocacao/:id',   putPacienteLeito);
+router.put('/liberacao/:id',   putLiberarPacienteLeito);
 
 router.post('/permissao/',   postProfissionalPermissao);
 router.get('/permissao/',   getProfissionalPermissao);
