@@ -29,8 +29,8 @@ async function postLeito(req, res) {
 
 async function getLeito(req, res) {
   try {
-    const { nome, nome_setor } = req.query;
-    const resultado = await selectLeito(nome, nome_setor);
+    const { nome, id_setor } = req.query;
+    const resultado = await selectLeito(nome, id_setor);
     if (!resultado || resultado.length === 0) {
       return res.status(404).json({ message: "Leito não encontrado." });
     }

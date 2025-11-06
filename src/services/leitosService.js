@@ -47,7 +47,7 @@ async function insertLeito(leito) {
   }
 }
 
-async function selectLeito(nome, nome_setor, id_setor) {
+async function selectLeito(nome, id_setor) {
   let query = `
     SELECT 
       "Leitos"."Id", 
@@ -67,9 +67,9 @@ async function selectLeito(nome, nome_setor, id_setor) {
     conditions.push(`"Leitos"."Nome" ILIKE $${params.length}`);
   }
 
-  if (nome_setor) {
-    params.push(`%${nome_setor}%`);
-    conditions.push(`"Setores"."Nome" ILIKE $${params.length}`);
+  if (id_setor) {
+    params.push(`${id_setor}`);
+    conditions.push(`"Setores"."Id" = $${params.length}`);
   }
 
   if (conditions.length) {
