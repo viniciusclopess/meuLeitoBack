@@ -41,19 +41,50 @@ async function insertComorbidade(comorbidade) {
   }
 }
 
-// Get de setores
-async function selectComorbidade(nome) {
-  let query =
-    `SELECT * 
-    FROM "Comorbidades"`;
+/**
+ * selectComorbidade - paginação por OFFSET com total
+ * @param {Object} opts
+ * @returns {Promise<{ data: Array, total: number, page: number, pageSize: number }>}
+**/
+async function selectComorbidade({ nome, page = 1, pageSize = 25 } = {}) {
+  // validação igual aos outros services
+  page = Math.max(1, Number(page) || 1);
+  pageSize = Math.min(200, Math.max(1, Number(pageSize) || 25));
+  const offset = (page - 1) * pageSize;
 
   const params = [];
+  let where = "";
+
   if (nome) {
-    query += ' WHERE "Comorbidades"."Nome" ILIKE $1';
     params.push(`%${nome}%`);
+    where = `WHERE C."Nome" ILIKE $${params.length}`;
   }
-  const { rows } = await pool.query(query, params);
-  return rows;
+
+  const sql = `
+    SELECT
+      C."Id",
+      C."Nome",
+      COUNT(*) OVER() AS __total_count
+    FROM "Comorbidades" C
+    ${where}
+    ORDER BY C."Nome" ASC
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
+  `;
+
+  params.push(pageSize, offset);
+
+  const { rows } = await pool.query(sql, params);
+
+  const total = rows.length ? Number(rows[0].__total_count) : 0;
+  const data = rows.map(({ __total_count, ...r }) => r);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize
+  };
 }
 
 async function updateComorbidade(id, comorbidade) {
