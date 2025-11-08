@@ -47,39 +47,60 @@ async function insertLeito(leito) {
   }
 }
 
-async function selectLeito(nome, id_setor) {
-  let query = `
-    SELECT 
-      "Leitos"."Id", 
-      "Leitos"."Nome", 
-      "Leitos"."Status",
-      "Setores"."Id" AS "IdSetor",
-      "Setores"."Nome" AS "NomeSetor"
-    FROM "Leitos"
-    INNER JOIN "Setores" ON "Leitos"."IdSetor" = "Setores"."Id"
-  `;
+/**
+ * selectLeito - paginação por OFFSET com total
+ * @param {Object} opts
+ * @returns {Promise<{ data: Array, total: number, page: number, pageSize: number }>}
+**/
+async function selectLeito({ nome, id_setor, page = 1, pageSize = 25 } = {}) {
+  page = Math.max(1, Number(page) || 1);
+  pageSize = Math.min(200, Math.max(1, Number(pageSize) || 25));
+  const offset = (page - 1) * pageSize;
 
-  const conditions = [];
   const params = [];
+  const conditions = [];
 
   if (nome) {
     params.push(`%${nome}%`);
-    conditions.push(`"Leitos"."Nome" ILIKE $${params.length}`);
+    conditions.push(`L."Nome" ILIKE $${params.length}`);
   }
 
   if (id_setor) {
-    params.push(`${id_setor}`);
-    conditions.push(`"Setores"."Id" = $${params.length}`);
+    params.push(Number(id_setor));
+    conditions.push(`S."Id" = $${params.length}`);
   }
 
-  if (conditions.length) {
-    query += " WHERE " + conditions.join(" AND ");
-  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  query += ` ORDER BY "Setores"."Nome", "Leitos"."Nome"`;
+  const sql = `
+    SELECT
+      L."Id",
+      L."Nome",
+      L."Status",
+      S."Id"   AS "IdSetor",
+      S."Nome" AS "NomeSetor",
+      COUNT(*) OVER() AS __total_count
+    FROM "Leitos" L
+    INNER JOIN "Setores" S ON L."IdSetor" = S."Id"
+    ${where}
+    ORDER BY S."Nome", L."Nome"
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
+  `;
 
-  const { rows } = await pool.query(query, params);
-  return rows;
+  params.push(pageSize, offset);
+
+  const { rows } = await pool.query(sql, params);
+
+  const total = rows.length ? Number(rows[0].__total_count) : 0;
+  const data = rows.map(({ __total_count, ...r }) => r);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize
+  };
 }
 
 async function updateLeito(id, leito) {

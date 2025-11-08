@@ -29,20 +29,27 @@ async function postLeito(req, res) {
 
 async function getLeito(req, res) {
   try {
-    const { nome, id_setor } = req.query;
-    const resultado = await selectLeito(nome, id_setor);
-    if (!resultado || resultado.length === 0) {
-      return res.status(404).json({ message: "Leito não encontrado." });
+    const { nome, id_setor, page, pageSize } = req.query;
+
+    const result = await selectLeito({ nome, id_setor, page, pageSize });
+
+    if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
+      return res.status(404).json({
+        message: "Leito não encontrado.",
+        data: [],
+      });
     }
+
     return res.status(200).json({
-      message: "Leitos encontrados:",
-      data: resultado
+      message: "Leitos encontrados",
+      ...result
     });
+
   } catch (err) {
-    console.error(err);
-    return res.status(400).json({
+    console.error("Erro em getLeito:", err);
+    return res.status(500).json({
       message: "Erro ao buscar leito.",
-      error: err.message
+      error: err.message,
     });
   }
 }
