@@ -27,23 +27,30 @@ async function postPaciente(req, res) {
   }
 }
 
-async function getPaciente(req, res){
-  try{
+async function getPaciente(req, res) {
+  try {
     const { nome } = req.query;
-    const resultado = await selectPaciente(nome);
-    if(!resultado) return res.status(404).json({
-      message: "Paciente não encontrado."
-    });
-    return res.status(200).json({
-      message: "Pacientes encontrados:", 
-      data: resultado
-    })
-  } catch (err) {
-    console.error(err);
-    return res.status(400).json({ 
-        message: 'Erro ao buscar paciente.', 
-        error: err.message
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 25));
+    const result = await selectPaciente({ nome, page, pageSize });
+
+    if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
+      return res.status(404).json({
+        message: 'Paciente não encontrado.',
+        data: [],
       });
+    }
+
+    return res.status(200).json({
+      message: 'Pacientes encontrados',
+      ...result,
+    });
+  } catch (err) {
+    console.error('Erro em getPaciente:', err);
+    return res.status(500).json({
+      message: 'Erro ao buscar paciente.',
+      error: err.message,
+    });
   }
 }
 
