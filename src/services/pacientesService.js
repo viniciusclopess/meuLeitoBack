@@ -55,18 +55,51 @@ async function insertPaciente(paciente) {
   }
 }
 
-async function selectPaciente(nome) {
-  let query =
-    `SELECT 
-      *
-    FROM "Pacientes"`;
+/**
+ * selectPaciente - paginação por OFFSET com total
+ * @param {Object} opts
+ *   - nome: string (opcional) -> filtro ILIKE
+ *   - page: 1-based page number (default 1)
+ *   - pageSize: number (default 25, max 200)
+ * @returns {Promise<{ data: Array, total: number, page: number, pageSize: number, totalPages: number }>}
+ */
+async function selectPaciente({ nome, page = 1, pageSize = 25 } = {}) {
+  // validação / limites
+  page = Math.max(1, Number(page) || 1);
+  pageSize = Math.min(200, Math.max(1, Number(pageSize) || 25));
+  const offset = (page - 1) * pageSize;
+
   const params = [];
+  let where = "";
+
   if (nome) {
-    query += ' WHERE "Pacientes"."Nome" ILIKE $1';
     params.push(`%${nome}%`);
+    where = `WHERE p."Nome" ILIKE $${params.length}`;
   }
-  const { rows } = await pool.query(query, params);
-  return rows;
+
+  const sql = `
+    SELECT
+      p.*,
+      COUNT(*) OVER() AS __total_count
+    FROM "Pacientes" p
+    ${where}
+    ORDER BY p."Nome" ASC, p."Id" ASC
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
+  `;
+  params.push(pageSize, offset);
+
+  const { rows } = await pool.query(sql, params);
+
+  const total = rows.length ? Number(rows[0].__total_count) : 0;
+  const data = rows.map(({ __total_count, ...r }) => r);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize
+  };
 }
 
 async function updatePaciente(id, paciente) {

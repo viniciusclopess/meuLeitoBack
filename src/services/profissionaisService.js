@@ -99,19 +99,35 @@ async function insertProfissional(profissional) {
     client.release();
   }
 }
+/**
+ * @param {Object} opts
+ * @returns {Promise<{ data: Array, total: number, page: number, pageSize: number }>}
+**/
+async function selectProfissional({ nome, page = 1, pageSize = 25 } = {}) {
+  // validação / limites (mesma lógica do selectPaciente)
+  page = Math.max(1, Number(page) || 1);
+  pageSize = Math.min(200, Math.max(1, Number(pageSize) || 25));
+  const offset = (page - 1) * pageSize;
 
-async function selectProfissional(nome) {
-  let query = `
+  const params = [];
+  let where = "";
+
+  if (nome) {
+    params.push(`%${nome}%`);
+    where = `WHERE PR."Nome" ILIKE $${params.length}`;
+  }
+
+  const sql = `
     SELECT
-      PR."Id", 
-      PR."Nome", 
-      PR."CPF", 
-      PR."Nascimento", 
-      PR."Sexo", 
-      PR."Telefone", 
+      PR."Id",
+      PR."Nome",
+      PR."CPF",
+      PR."Nascimento",
+      PR."Sexo",
+      PR."Telefone",
       PR."NumeroDeRegistro",
       PR."Ativo",
-      PF."Id" AS "IdPerfil", 
+      PF."Id"   AS "IdPerfil",
       PF."Nome" AS "Perfil",
       COALESCE(
         JSON_AGG(
@@ -119,36 +135,42 @@ async function selectProfissional(nome) {
           ORDER BY ST."Id"
         ) FILTER (WHERE ST."Id" IS NOT NULL),
         '[]'::json
-      ) AS "Setores"
+      ) AS "Setores",
+      COUNT(*) OVER() AS __total_count
     FROM "Profissionais" PR
     INNER JOIN "Perfis" PF ON PR."IdPerfil" = PF."Id"
     LEFT JOIN "ProfissionaisSetores" PS ON PR."Id" = PS."IdProfissional"
     LEFT JOIN "Setores" ST ON ST."Id" = PS."IdSetor"
-  `;
-
-  const params = [];
-  if (nome) {
-    query += ` WHERE PR."Nome" ILIKE $1`;
-    params.push(`%${nome}%`);
-  }
-
-  query += `
-    GROUP BY 
-      PR."Id", 
-      PR."Nome", 
-      PR."CPF", 
-      PR."Nascimento", 
-      PR."Sexo", 
-      PR."Telefone", 
+    ${where}
+    GROUP BY
+      PR."Id",
+      PR."Nome",
+      PR."CPF",
+      PR."Nascimento",
+      PR."Sexo",
+      PR."Telefone",
       PR."NumeroDeRegistro",
       PR."Ativo",
-      PF."Id", 
+      PF."Id",
       PF."Nome"
-    ORDER BY PR."Nome";
+    ORDER BY PR."Nome" ASC, PR."Id" ASC
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
   `;
 
-  const { rows } = await pool.query(query, params);
-  return rows;
+  params.push(pageSize, offset);
+
+  const { rows } = await pool.query(sql, params);
+
+  const total = rows.length ? Number(rows[0].__total_count) : 0;
+  const data = rows.map(({ __total_count, ...r }) => r);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize
+  };
 }
 
 async function updateProfissional(id, profissional) {

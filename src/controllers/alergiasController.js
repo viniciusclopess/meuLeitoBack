@@ -22,15 +22,28 @@ async function postAlergia(req, res) {
   }
 }
 
-async function getAlergia(req, res){
-  try{
-    const { nome } = req.query; 
-    const resultado = await selectAlergia(nome);
-    if(!resultado) return res.status(404).json( {message: "Alergia não encontrada."} );
-    return res.status(200).json( {message: "Alergias encontradas:", data: resultado} )
+async function getAlergia(req, res) {
+  try {
+    const { nome, page, pageSize } = req.query;
+    const result = await selectAlergia({ nome, page, pageSize });
+
+    if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
+      return res.status(404).json({
+        message: "Alergia não encontrada.",
+        data: []
+      });
+    }
+
+    return res.status(200).json({
+      message: "Alergias encontradas",
+      ...result
+    });
   } catch (err) {
-    console.error(err);
-    return res.status(400).json( { message: 'Erro ao buscar alergia.', error: err.message} );
+    console.error('Erro em getAlergia:', err);
+    return res.status(500).json({
+      message: 'Erro ao buscar alergia.',
+      error: err.message
+    });
   }
 }
 

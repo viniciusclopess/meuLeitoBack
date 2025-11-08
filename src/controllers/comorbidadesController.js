@@ -22,15 +22,28 @@ async function postComorbidade(req, res) {
   }
 }
 
-async function getComorbidade(req, res){
-  try{
-    const { nome } = req.query; 
-    const resultado = await selectComorbidade(nome);
-    if(!resultado) return res.status(404).json( {message: "Comorbidade não encontrada."} );
-    return res.status(200).json( {message: "Comorbidades encontradas:", data: resultado} )
+async function getComorbidade(req, res) {
+  try {
+    const { nome, page, pageSize } = req.query;
+    const result = await selectComorbidade({ nome, page, pageSize });
+
+    if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
+      return res.status(404).json({
+        message: "Comorbidade não encontrada.",
+        data: []
+      });
+    }
+
+    return res.status(200).json({
+      message: "Comorbidades encontradas",
+      ...result
+    });
   } catch (err) {
-    console.error(err);
-    return res.status(400).json( { message: 'Erro ao buscar comorbidade.', error: err.message} );
+    console.error("Erro em getComorbidade:", err);
+    return res.status(500).json({
+      message: "Erro ao buscar comorbidade.",
+      error: err.message
+    });
   }
 }
 

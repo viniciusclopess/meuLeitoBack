@@ -22,15 +22,28 @@ async function postSetor(req, res) {
   }
 }
 
-async function getSetor(req, res){
-  try{
-    const { nome } = req.query; 
-    const resultado = await selectSetor(nome);
-    if(!resultado) return res.status(404).json( {message: "Setor não encontrado."} );
-    return res.status(200).json( {message: "Setores encontrados:", data: resultado} )
+async function getSetor(req, res) {
+  try {
+    const { nome, page, pageSize } = req.query;
+    const result = await selectSetor({ nome, page, pageSize });
+
+    if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
+      return res.status(404).json({
+        message: "Setor não encontrado.",
+        data: [],
+      });
+    }
+
+    return res.status(200).json({
+      message: "Setores encontrados",
+      ...result,
+    });
   } catch (err) {
-    console.error(err);
-    return res.status(400).json( { message: 'Erro ao buscar setor.', error: err.message} );
+    console.error("Erro em getSetor:", err);
+    return res.status(500).json({
+      message: "Erro ao buscar setor.",
+      error: err.message,
+    });
   }
 }
 
