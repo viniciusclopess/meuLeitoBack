@@ -24,23 +24,28 @@ async function postProfissional(req, res) {
   }
 }
 
-async function getProfissional(req, res){
-  try{
-    const { nome } = req.query;
-    const resultado = await selectProfissional(nome);
-    if(!resultado) return res.status(404).json({
-      message: "Profissional não encontrado."
-    });
-    return res.status(200).json({
-      message: "Profissionais encontrados:", 
-      data: resultado
-    })
-  } catch (err) {
-    console.error(err);
-    return res.status(400).json({ 
-        message: 'Erro ao buscar profissional.', 
-        error: err.message
+async function getProfissional(req, res) {
+  try {
+    const { nome, page, pageSize } = req.query;
+    const result = await selectProfissional({ nome, page, pageSize });
+
+    if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
+      return res.status(404).json({
+        message: 'Profissional não encontrado.',
+        data: []
       });
+    }
+
+    return res.status(200).json({
+      message: 'Profissionais encontrados',
+      ...result
+    });
+  } catch (err) {
+    console.error('Erro em getProfissional:', err);
+    return res.status(500).json({
+      message: 'Erro ao buscar profissional.',
+      error: err.message
+    });
   }
 }
 

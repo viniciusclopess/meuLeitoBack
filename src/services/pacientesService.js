@@ -65,8 +65,8 @@ async function insertPaciente(paciente) {
  */
 async function selectPaciente({ nome, page = 1, pageSize = 25 } = {}) {
   // validação / limites
-  page = Math.max(1, Number(page, 1));
-  pageSize = Math.min(200, Math.max(1, Number(pageSize, 25)));
+  page = Math.max(1, Number(page) || 1);
+  pageSize = Math.min(200, Math.max(1, Number(pageSize) || 25));
   const offset = (page - 1) * pageSize;
 
   const params = [];
