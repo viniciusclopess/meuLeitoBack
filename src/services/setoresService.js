@@ -42,19 +42,49 @@ async function insertSetor(setor) {
   }
 }
 
-// Get de setores
-async function selectSetor(nome) {
-  let query =
-    `SELECT * 
-    FROM "Setores"`;
+/**
+ * selectSetor - paginação por OFFSET com total
+ * @param {Object} opts
+ * @returns {Promise<{ data: Array, total: number, page: number, pageSize: number }>}
+ */
+async function selectSetor({ nome, page = 1, pageSize = 25 } = {}) {
+  page = Math.max(1, Number(page) || 1);
+  pageSize = Math.min(200, Math.max(1, Number(pageSize) || 25));
+  const offset = (page - 1) * pageSize;
 
   const params = [];
+  let where = "";
+
   if (nome) {
-    query += ' WHERE "Setores"."Nome" ILIKE $1';
     params.push(`%${nome}%`);
+    where = `WHERE S."Nome" ILIKE $${params.length}`;
   }
-  const { rows } = await pool.query(query, params);
-  return rows;
+
+  const sql = `
+    SELECT
+      S."Id",
+      S."Nome",
+      COUNT(*) OVER() AS __total_count
+    FROM "Setores" S
+    ${where}
+    ORDER BY S."Nome" ASC
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
+  `;
+
+  params.push(pageSize, offset);
+
+  const { rows } = await pool.query(sql, params);
+
+  const total = rows.length ? Number(rows[0].__total_count) : 0;
+  const data = rows.map(({ __total_count, ...r }) => r);
+
+  return {
+    data,
+    total,
+    page,
+    pageSize
+  };
 }
 
 async function updateSetor(id, setor) {
