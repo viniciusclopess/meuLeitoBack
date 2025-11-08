@@ -91,15 +91,12 @@ async function selectPaciente({ nome, page = 1, pageSize = 25 } = {}) {
 
   const { rows } = await pool.query(sql, params);
 
-  const total = rows.length ? Number(rows[0].__total_count) : 0;
   const data = rows.map(({ __total_count, ...r }) => r);
 
   return {
     data,
-    total,
     page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    pageSize
   };
 }
 

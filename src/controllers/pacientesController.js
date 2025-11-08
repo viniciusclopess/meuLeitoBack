@@ -29,9 +29,7 @@ async function postPaciente(req, res) {
 
 async function getPaciente(req, res) {
   try {
-    const { nome } = req.query;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 25));
+    const { nome, page, pageSize } = req.query;
     const result = await selectPaciente({ nome, page, pageSize });
 
     if (!result || (Array.isArray(result.data) && result.data.length === 0)) {
