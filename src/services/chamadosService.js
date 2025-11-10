@@ -219,8 +219,8 @@ async function selectChamadosPendentes(id_setor) {
   SELECT 
     "Chamados"."Id"                 AS "chamadoId",
     "PacienteLeito"."Id"            AS "pacienteLeitoId",
-    "Pacientes"."Nome"              AS "pacienteNome",
-    "Leitos"."Nome"                 AS "leitoNome",
+    "Pacientes"."Nome"              AS "nomePaciente",
+    "Leitos"."Nome"                 AS "nomeLeito",
     "Setores"."Id"                  AS "setorId",
     "Chamados"."Status"             AS "status",
     "Chamados"."Tipo"               AS "tipo",
