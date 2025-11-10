@@ -141,25 +141,25 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
   return rows;
 }
 
-async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status) {
+async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor) {
   let query = `
   SELECT 
-    "Chamados"."Id",
-    "PacienteLeito"."Id"            AS "IdPacienteLeito",
-    "Pacientes"."Id"                AS "IdPaciente",
-    "Pacientes"."Nome"              AS "Paciente",
-    "Leitos"."Id"                   AS "IdLeito",
-    "Leitos"."Nome"                 AS "Leito",
-    "Setores"."Id"                  AS "IdSetor",
-    "Setores"."Nome"                AS "Setor",
-    "Profissionais"."Id"            AS "IdProfissional",
-    "Profissionais"."Nome"          AS "Profissional",
-    "Chamados"."Status",
-    "Chamados"."Tipo",
-    "Chamados"."Prioridade",
-    "Chamados"."Mensagem",
-    "Chamados"."DataCriacao",
-    "Chamados"."DataFim"
+    "Chamados"."Id"                 AS "chamadoId",
+    "PacienteLeito"."Id"            AS "pacienteLeitoId",
+    "Pacientes"."Id"                AS "pacienteId",
+    "Pacientes"."Nome"              AS "nomePaciente",
+    "Leitos"."Id"                   AS "leitoId",
+    "Leitos"."Nome"                 AS "nomeLeito",
+    "Setores"."Id"                  AS "setorId",
+    "Setores"."Nome"                AS "nomeSetor",
+    "Profissionais"."Id"            AS "profissionalId",
+    "Profissionais"."Nome"          AS "nomeProfissional",
+    "Chamados"."Status"             AS "status",
+    "Chamados"."Tipo"               AS "tipo",
+    "Chamados"."Prioridade"         AS "prioridade",
+    "Chamados"."Mensagem"           AS "mensagem",
+    "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
     ON "Chamados"."IdPacienteLeito" = "PacienteLeito"."Id"
@@ -170,7 +170,7 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
   INNER JOIN "Leitos"
     ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
   INNER JOIN "Setores"
-    ON "Setores"."Id" = "Leitos".IdSetor" 
+    ON "Setores"."Id" = "Leitos"."IdSetor" 
   `;
 
   const params = [];
@@ -200,11 +200,6 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
   if (id_setor) {
     query += params.length ? ` AND "Setores"."Id" = $${paramIndex++}` : ` WHERE "Setores"."Id" = $${paramIndex++}`;
     params.push(id_setor);
-  }
-
-  if (status) {
-    query += params.length ? ` AND "Chamados"."Status" = $${paramIndex++}` : ` WHERE "Chamados"."Status" = $${paramIndex++}`;
-    params.push(status);
   }
 
   query += ' ORDER BY "Chamados"."DataCriacao" DESC LIMIT 1';

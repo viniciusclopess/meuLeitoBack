@@ -57,8 +57,8 @@ async function getChamado(req, res) {
 
 async function getUltimoChamado(req, res) {
   try {
-    const { id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status } = req.query;
-    const resultado = await selectUltimoChamado( id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status );
+    const { id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor } = req.query;
+    const resultado = await selectUltimoChamado( id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor );
 
     if (!resultado || resultado.length === 0) {
       return res.status(404).json({
