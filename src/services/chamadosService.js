@@ -213,6 +213,45 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
   return rows[0] || null;
 }
 
+async function selectChamadosPendentes(id_setor) {
+
+  let query = `
+  SELECT 
+    "Chamados"."Id",
+    "PacienteLeito"."Id"            AS "IdPacienteLeito",
+    "Pacientes"."Nome"              AS "Paciente",
+    "Leitos"."Nome"                 AS "Leito",
+    "Setores"."Id"                  AS "IdSetor",
+    "Chamados"."Status",
+    "Chamados"."Tipo",
+    "Chamados"."Prioridade",
+    "Chamados"."Mensagem",
+    "Chamados"."DataCriacao",
+    "Chamados"."DataFim"
+  FROM "Chamados"
+  INNER JOIN "PacienteLeito" 
+    ON "Chamados"."IdPacienteLeito" = "PacienteLeito"."Id"
+  INNER JOIN "Pacientes"
+    ON "PacienteLeito"."IdPaciente" = "Pacientes"."Id"
+  LEFT JOIN "Profissionais"
+    ON "Chamados"."IdProfissional" = "Profissionais"."Id"
+  INNER JOIN "Leitos"
+    ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
+  INNER JOIN "Setores"
+    ON "Setores"."Id" = "Leitos"."IdSetor"
+  WHERE 
+    "Chamados"."Status" = 'PENDENTE'
+  `;
+
+  if(id_setor){
+    query += ` AND "Setores"."Id" = ${id_setor}`
+  }
+  query += ' ORDER BY "Chamados"."DataCriacao" DESC';
+
+  const { rows } = await pool.query(query);
+  return rows;
+}
+
 async function acceptChamado({ id_chamado, id_profissional }) {
   const client = await pool.connect();
   try {
@@ -290,4 +329,4 @@ async function finishChamado(id_chamado) {
     client.release();
   }
 }
-module.exports = { insertChamado, selectUltimoChamado, selectChamado, acceptChamado, finishChamado }
+module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado }
