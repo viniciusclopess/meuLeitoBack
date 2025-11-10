@@ -295,7 +295,7 @@ async function finishChamado(id_chamado) {
 
     const sqlUpdate = `
       UPDATE "Chamados"
-       SET "Status"     = 'CONCLUÍDO',
+       SET "Status"     = 'CONCLUIDO',
            "DataFim"    = NOW()
      WHERE "Id"         = $1
        AND "Status" = 'EM ATENDIMENTO'
@@ -305,6 +305,7 @@ async function finishChamado(id_chamado) {
     const paramsUpdate = [
       id_chamado
     ];
+
 
     const { rows: finishChamadoRows } = await client.query(sqlUpdate, paramsUpdate);
 
@@ -324,4 +325,5 @@ async function finishChamado(id_chamado) {
     client.release();
   }
 }
+
 module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado }
