@@ -78,8 +78,8 @@ async function kpiTotalChamados(filters = {}) {
         ROUND( COUNT(DISTINCT c."Id") FILTER (WHERE c."Status" = 'EM ATENDIMENTO' AND c."DataFim" IS NULL) * 100.0 / NULLIF(COUNT(DISTINCT c."Id"), 0), 2 ) AS "aceitos_sem_conclusao_pct",
         COUNT( DISTINCT c."Id") FILTER (WHERE c."Status" = 'ENCERRADO AUTOMATICAMENTE')                                                                     AS "sem_resposta",
         ROUND( COUNT(DISTINCT c."Id") FILTER (WHERE c."Status" = 'ENCERRADO AUTOMATICAMENTE') * 100.0 / NULLIF(COUNT(DISTINCT c."Id"), 0), 2 )              AS "sem_resposta_pct",      
-        COUNT( DISTINCT c."Id") FILTER (WHERE c."Status" = 'CONCLUÍDO')                                                                                     AS "concluidos",
-        ROUND( COUNT(DISTINCT c."Id") FILTER (WHERE c."Status" = 'CONCLUÍDO') * 100.0 / NULLIF(COUNT(DISTINCT c."Id"), 0), 2 )                              AS "concluidos_pct",
+        COUNT( DISTINCT c."Id") FILTER (WHERE c."Status" = 'CONCLUIDO')                                                                                     AS "concluidos",
+        ROUND( COUNT(DISTINCT c."Id") FILTER (WHERE c."Status" = 'CONCLUIDO') * 100.0 / NULLIF(COUNT(DISTINCT c."Id"), 0), 2 )                              AS "concluidos_pct",
         COUNT( DISTINCT c."Id") FILTER (WHERE c."Status" = 'CANCELADO')                                                                                     AS "cancelados",
         ROUND( COUNT(DISTINCT c."Id") FILTER (WHERE c."Status" = 'CANCELADO') * 100.0 / NULLIF(COUNT(DISTINCT c."Id"), 0), 2 )                              AS "cancelados_pct"      
         FROM "Chamados" c
@@ -90,9 +90,80 @@ async function kpiTotalChamados(filters = {}) {
     return rows[0] ?? { total_chamados: 0 };
   } catch (err) {
     // log detalhado para ajudar no debug de performance
-    console.error("Erro em kpiTotalChamados:", err);
+    console.error("Erro em KPI's de totalizadores de chamado:", err);
+    throw err;
+  }
+}
+async function kpiTempoMedioConclusao(filters = {}) {
+  try {
+    const { ini, fim } = defaultRange(filters);
+
+    const conditions = [];
+    const params = [ini, fim];
+
+    const id_setor = parseIntsCSV(filters.id_setor);
+
+    const pushArrayParam = (values) => {
+      params.push(values);
+      return params.length; // index
+    };
+
+    // Filtra pelo range de criação do chamado
+    conditions.push(`c."DataCriacao" BETWEEN $1 AND $2`);
+
+    // Se filtrar pelo setor
+    if (id_setor && id_setor.length) {
+      const idx = pushArrayParam(id_setor);
+      conditions.push(
+        `EXISTS (
+           SELECT 1
+           FROM "PacienteLeito" pl2
+           JOIN "Leitos" l2 ON l2."Id" = pl2."IdLeito"
+           WHERE pl2."Id" = c."IdPacienteLeito"
+             AND l2."IdSetor" = ANY($${idx})
+         )`
+      );
+    }
+
+    const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const sql = `
+      SELECT
+        ROUND(
+          COALESCE(
+            AVG(EXTRACT(EPOCH FROM (c."DataFim" - c."DataCriacao")))
+              FILTER (WHERE c."Status" = 'CONCLUIDO' AND c."DataFim" IS NOT NULL) / 60.0,
+            0
+          ),
+          2
+        ) AS avg_minutes,
+
+        ROUND(
+          COALESCE(
+            AVG(EXTRACT(EPOCH FROM (c."DataFim" - c."DataCriacao")))
+              FILTER (WHERE c."Status" = 'CONCLUIDO' AND c."DataFim" IS NOT NULL),
+            0
+          ),
+          2
+        ) AS avg_seconds
+
+      FROM "Chamados" c
+
+      ${whereSql};
+    `;
+
+    const { rows } = await pool.query(sql, params);
+
+    return {  
+      avg_minutes: Number(rows[0]?.avg_minutes ?? 0),
+      avg_seconds: Number(rows[0]?.avg_seconds ?? 0),
+    };
+
+  } catch (err) {
+    console.error("Erro em KPI's de tempo médio:", err);
     throw err;
   }
 }
 
-module.exports = { kpiTotalChamados }
+
+module.exports = { kpiTotalChamados, kpiTempoMedioConclusao }
