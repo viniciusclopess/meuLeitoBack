@@ -217,17 +217,17 @@ async function selectChamadosPendentes(id_setor) {
 
   let query = `
   SELECT 
-    "Chamados"."Id",
-    "PacienteLeito"."Id"            AS "IdPacienteLeito",
-    "Pacientes"."Nome"              AS "Paciente",
-    "Leitos"."Nome"                 AS "Leito",
-    "Setores"."Id"                  AS "IdSetor",
-    "Chamados"."Status",
-    "Chamados"."Tipo",
-    "Chamados"."Prioridade",
-    "Chamados"."Mensagem",
-    "Chamados"."DataCriacao",
-    "Chamados"."DataFim"
+    "Chamados"."Id"                 AS "chamadoId",
+    "PacienteLeito"."Id"            AS "pacienteLeitoId",
+    "Pacientes"."Nome"              AS "pacienteNome",
+    "Leitos"."Nome"                 AS "leitoNome",
+    "Setores"."Id"                  AS "setorId",
+    "Chamados"."Status"             AS "status",
+    "Chamados"."Tipo"               AS "tipo",
+    "Chamados"."Prioridade"         AS "prioridade",
+    "Chamados"."Mensagem"           AS "mensagem",
+    "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
     ON "Chamados"."IdPacienteLeito" = "PacienteLeito"."Id"
