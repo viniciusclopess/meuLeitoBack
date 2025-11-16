@@ -4,7 +4,8 @@ const {
     postProfissionalPermissao, getProfissionalPermissao, putProfissionalPermissao, deleteProfissionalPermissao,
     postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores,
     postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,
-    postPacienteComorbidade, getPacienteComorbidade, putPacienteComorbidade, deletePacienteComorbidade
+    postPacienteComorbidade, getPacienteComorbidade, putPacienteComorbidade, deletePacienteComorbidade,
+    putTransferirPacienteLeito
 } = require('../controllers/joinsController');
 //const { autenticarJWT } = require('../middlewares/authMiddleware')
 
@@ -14,6 +15,7 @@ router.post('/alocacao/',   postPacienteLeito);
 router.get('/alocacao/',   getPacienteLeito);
 router.put('/alocacao/:id',   putPacienteLeito);
 router.put('/liberacao/:id',   putLiberarPacienteLeito);
+router.put('/transferencia/:id',   putTransferirPacienteLeito);
 
 router.post('/permissao/',   postProfissionalPermissao);
 router.get('/permissao/',   getProfissionalPermissao);
