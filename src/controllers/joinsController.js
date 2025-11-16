@@ -3,7 +3,8 @@ const {
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
   insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
   insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia,
-  insertPacienteComorbidade, selectPacienteComorbidade, updatePacienteComorbidade, removePacienteComorbidade 
+  insertPacienteComorbidade, selectPacienteComorbidade, updatePacienteComorbidade, removePacienteComorbidade, 
+  updateTransferirPacienteLeito
 
 } = require('../services/joinsService');
 
@@ -86,6 +87,26 @@ async function putLiberarPacienteLeito(req, res){
     console.error(err);
     return res.status(400).json({ 
       message: 'Erro ao atualizar atendimento.', 
+      error: err.message
+    })
+  }
+}
+
+async function putTransferirPacienteLeito(req, res){
+  try{
+    const { id } = req.params;
+    const resultado = await updateTransferirPacienteLeito( id, req.body )
+    if(!resultado) return res.status(404).json({
+      message: "Alocação não encontrada."
+    });
+    return res.status(200).json({
+      message: "Tranferência realizada:", 
+      data: resultado
+    })
+  } catch(err){
+    console.error(err);
+    return res.status(400).json({ 
+      message: 'Erro ao tranferir paciente.', 
       error: err.message
     })
   }
@@ -497,7 +518,7 @@ async function deletePacienteComorbidade(req, res) {
 }
 
 module.exports = { 
-  postPacienteLeito, getPacienteLeito, putPacienteLeito, putLiberarPacienteLeito,
+  postPacienteLeito, getPacienteLeito, putPacienteLeito, putLiberarPacienteLeito, putTransferirPacienteLeito,
   postProfissionalPermissao, getProfissionalPermissao, putProfissionalPermissao, deleteProfissionalPermissao,
   postProfissionaisSetores, getProfissionaisSetores, putProfissionaisSetores, deleteProfissionaisSetores,
   postPacienteAlergia, getPacienteAlergia, putPacienteAlergia, deletePacienteAlergia,

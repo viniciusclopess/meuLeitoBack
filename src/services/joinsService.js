@@ -260,6 +260,181 @@ async function updateLiberarPacienteLeito(id) {
     client.release();
   }
 }
+async function updateTransferirPacienteLeito(alocacaoAtualId, novoLeitoId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (!alocacaoAtualId) throw new Error('Id da alocação é obrigatório.');
+    if (!novoLeitoId) throw new Error('Id do novo leito é obrigatório.');
+
+    // 1) Pega a alocação atual e trava a linha
+    const rAloc = await client.query(
+      `
+      SELECT "Id", "IdPaciente", "IdLeito", "DataEntrada", "DataSaida"
+      FROM "PacienteLeito"
+      WHERE "Id" = $1
+      FOR UPDATE
+      `,
+      [alocacaoAtualId]
+    );
+
+    if (rAloc.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Alocação não encontrada.' };
+    }
+
+    const aloc = rAloc.rows[0];
+
+    if (aloc.DataSaida !== null) {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Alocação já encerrada (DataSaida preenchida).' };
+    }
+
+    const idLeitoAtual = aloc.IdLeito;
+    const idLeitoNovo = Number(novoLeitoId);
+
+    if (idLeitoAtual === idLeitoNovo) {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Paciente já está no leito informado.' };
+    }
+
+    // 2) Trava o leito destino e verifica disponibilidade
+    const rLeitos = await client.query(
+      `
+      SELECT "Id", "Status"
+      FROM "Leitos"
+      WHERE "Id" = ANY($1::int[])
+      FOR UPDATE
+      `,
+      [[idLeitoNovo, idLeitoAtual].filter(Boolean)]
+    );
+
+    // buscar leito destino no resultado
+    const leitoDestino = rLeitos.rows.find(r => r.Id === idLeitoNovo);
+    if (!leitoDestino) {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Leito destino não encontrado.' };
+    }
+    if (leitoDestino.Status !== 'Livre') {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Leito destino não está livre.' };
+    }
+
+    // 3) Fecha a alocação atual (DataSaida = NOW()) — só executa se ainda estiver aberta
+    const rFechaAloc = await client.query(
+      `
+      UPDATE "PacienteLeito"
+      SET "DataSaida" = NOW()
+      WHERE "Id" = $1
+        AND "DataSaida" IS NULL
+      RETURNING *
+      `,
+      [alocacaoAtualId]
+    );
+
+    // Se por alguma razão não foi atualizada (concorrência), aborta
+    if (rFechaAloc.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, warning: 'Não foi possível fechar a alocação atual (já encerrada?).' };
+    }
+
+    // 4) Marca o leito antigo como 'Livre' (se existir)
+    if (idLeitoAtual) {
+      await client.query(
+        `
+        UPDATE "Leitos"
+        SET "Status" = 'Livre'
+        WHERE "Id" = $1
+        `,
+        [idLeitoAtual]
+      );
+    }
+
+    // 5) Insere nova alocação no novo leito (DataEntrada = NOW())
+    const rNovo = await client.query(
+      `
+      INSERT INTO "PacienteLeito" ("IdPaciente", "IdLeito", "DataEntrada")
+      VALUES ($1, $2, NOW())
+      RETURNING *
+      `,
+      [aloc.IdPaciente, idLeitoNovo]
+    );
+
+    // 6) Atualiza status do leito destino para 'Ocupado'
+    await client.query(
+      `
+      UPDATE "Leitos"
+      SET "Status" = 'Ocupado'
+      WHERE "Id" = $1
+      `,
+      [idLeitoNovo]
+    );
+
+    // 7) Retorna dados finais: alocacao antiga (fechada) e nova alocacao criada
+    const fechado = rFechaAloc.rows[0];
+    const novoAloc = rNovo.rows[0];
+
+    // opcional: pegar nomes legíveis para retorno (paciente, leito antigo, leito novo)
+    const { rows: finalRows } = await client.query(
+      `
+      SELECT
+        pl_old."Id"   AS "OldAlocId",
+        p."Id"        AS "PacienteId",
+        p."Nome"      AS "PacienteNome",
+        l_old."Id"    AS "LeitoAntigoId",
+        l_old."Nome"  AS "LeitoAntigoNome",
+        l_new."Id"    AS "LeitoNovoId",
+        l_new."Nome"  AS "LeitoNovoNome",
+        pl_old."DataEntrada" AS "OldDataEntrada",
+        pl_old."DataSaida"   AS "OldDataSaida",
+        pl_new."DataEntrada" AS "NewDataEntrada"
+      FROM "PacienteLeito" pl_old
+      JOIN "Pacientes" p ON p."Id" = pl_old."IdPaciente"
+      LEFT JOIN "Leitos" l_old ON l_old."Id" = $1
+      LEFT JOIN "Leitos" l_new ON l_new."Id" = $2
+      JOIN "PacienteLeito" pl_new ON pl_new."Id" = $3
+      WHERE pl_old."Id" = $4
+      `,
+      [idLeitoAtual, idLeitoNovo, novoAloc.Id, fechado.Id]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      ok: true,
+      antigo: finalRows[0] ? {
+        alocacaoAtualId: finalRows[0].OldAlocId,
+        dataEntrada: finalRows[0].OldDataEntrada,
+        dataSaida: finalRows[0].OldDataSaida,
+        leitoAntigo: {
+          id: finalRows[0].LeitoAntigoId,
+          nome: finalRows[0].LeitoAntigoNome
+        }
+      } : fechado,
+      novo: finalRows[0] ? {
+        alocacaoAtualId: novoAloc.Id,
+        dataEntrada: finalRows[0].NewDataEntrada,
+        leitoNovo: {
+          id: finalRows[0].LeitoNovoId,
+          nome: finalRows[0].LeitoNovoNome
+        },
+        paciente: {
+          id: finalRows[0].PacienteId,
+          nome: finalRows[0].PacienteNome
+        }
+      } : novoAloc
+    };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erro em transferir paciente:', err.message || err);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 
 //==================================================================================================================================
 //==================================================================================================================================
@@ -933,7 +1108,7 @@ async function removePacienteComorbidade(id) {
   }
 }
 module.exports = {
-  insertPacienteLeito, selectPacienteLeito, updatePacienteLeito, updateLiberarPacienteLeito,
+  insertPacienteLeito, selectPacienteLeito, updatePacienteLeito, updateLiberarPacienteLeito, updateTransferirPacienteLeito,
   insertProfissionalPermissao, selectProfissionalPermissao, updateProfissionalPermissao, removeProfissionalPermissao,
   insertProfissionaisSetores, selectProfissionaisSetores, updateProfissionaisSetores, removeProfissionaisSetores,
   insertPacienteAlergia, selectPacienteAlergia, updatePacienteAlergia, removePacienteAlergia,

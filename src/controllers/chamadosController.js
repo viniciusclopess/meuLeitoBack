@@ -1,4 +1,4 @@
-const { insertChamado, selectChamado, selectUltimoChamado, acceptChamado, finishChamado } = require('../services/chamadosService');
+const { insertChamado, selectChamado, selectUltimoChamado, acceptChamado, finishChamado, selectChamadosPendentes } = require('../services/chamadosService');
 
 async function postChamado(req, res) {
   try {
@@ -57,8 +57,36 @@ async function getChamado(req, res) {
 
 async function getUltimoChamado(req, res) {
   try {
-    const { id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status } = req.query;
-    const resultado = await selectUltimoChamado( id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status );
+    const { id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor } = req.query;
+    const resultado = await selectUltimoChamado( id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor );
+
+    if (!resultado || resultado.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Nenhum registro de chamado encontrado.'
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Chamados encontrados:',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao buscar chamados.',
+      error: err.message
+    });
+  }
+}
+
+async function getChamadosPendentes(req, res) {
+  try {
+    const { id_setor } = req.query;
+    const resultado = await selectChamadosPendentes( id_setor );
 
     if (!resultado || resultado.length === 0) {
       return res.status(404).json({
@@ -142,4 +170,4 @@ async function putFinishChamado(req, res) {
 }
 
 
-module.exports = { postChamado, getChamado, getUltimoChamado, putAcceptChamado, putFinishChamado };
+module.exports = { postChamado, getChamado, getUltimoChamado, getChamadosPendentes, putAcceptChamado, putFinishChamado };

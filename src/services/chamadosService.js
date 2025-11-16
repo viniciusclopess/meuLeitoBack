@@ -141,25 +141,25 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
   return rows;
 }
 
-async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status) {
+async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor) {
   let query = `
   SELECT 
-    "Chamados"."Id",
-    "PacienteLeito"."Id"            AS "IdPacienteLeito",
-    "Pacientes"."Id"                AS "IdPaciente",
-    "Pacientes"."Nome"              AS "Paciente",
-    "Leitos"."Id"                   AS "IdLeito",
-    "Leitos"."Nome"                 AS "Leito",
-    "Setores"."Id"                  AS "IdSetor",
-    "Setores"."Nome"                AS "Setor",
-    "Profissionais"."Id"            AS "IdProfissional",
-    "Profissionais"."Nome"          AS "Profissional",
-    "Chamados"."Status",
-    "Chamados"."Tipo",
-    "Chamados"."Prioridade",
-    "Chamados"."Mensagem",
-    "Chamados"."DataCriacao",
-    "Chamados"."DataFim"
+    "Chamados"."Id"                 AS "chamadoId",
+    "PacienteLeito"."Id"            AS "pacienteLeitoId",
+    "Pacientes"."Id"                AS "pacienteId",
+    "Pacientes"."Nome"              AS "nomePaciente",
+    "Leitos"."Id"                   AS "leitoId",
+    "Leitos"."Nome"                 AS "nomeLeito",
+    "Setores"."Id"                  AS "setorId",
+    "Setores"."Nome"                AS "nomeSetor",
+    "Profissionais"."Id"            AS "profissionalId",
+    "Profissionais"."Nome"          AS "nomeProfissional",
+    "Chamados"."Status"             AS "status",
+    "Chamados"."Tipo"               AS "tipo",
+    "Chamados"."Prioridade"         AS "prioridade",
+    "Chamados"."Mensagem"           AS "mensagem",
+    "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
     ON "Chamados"."IdPacienteLeito" = "PacienteLeito"."Id"
@@ -170,7 +170,7 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
   INNER JOIN "Leitos"
     ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
   INNER JOIN "Setores"
-    ON "Setores"."Id" = "Leitos".IdSetor" 
+    ON "Setores"."Id" = "Leitos"."IdSetor" 
   `;
 
   const params = [];
@@ -202,15 +202,49 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
     params.push(id_setor);
   }
 
-  if (status) {
-    query += params.length ? ` AND "Chamados"."Status" = $${paramIndex++}` : ` WHERE "Chamados"."Status" = $${paramIndex++}`;
-    params.push(status);
-  }
-
   query += ' ORDER BY "Chamados"."DataCriacao" DESC LIMIT 1';
 
   const { rows } = await pool.query(query, params);
   return rows[0] || null;
+}
+
+async function selectChamadosPendentes(id_setor) {
+
+  let query = `
+  SELECT 
+    "Chamados"."Id"                 AS "chamadoId",
+    "PacienteLeito"."Id"            AS "pacienteLeitoId",
+    "Pacientes"."Nome"              AS "nomePaciente",
+    "Leitos"."Nome"                 AS "nomeLeito",
+    "Setores"."Id"                  AS "setorId",
+    "Chamados"."Status"             AS "status",
+    "Chamados"."Tipo"               AS "tipo",
+    "Chamados"."Prioridade"         AS "prioridade",
+    "Chamados"."Mensagem"           AS "mensagem",
+    "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataFim"            AS "horaFim"
+  FROM "Chamados"
+  INNER JOIN "PacienteLeito" 
+    ON "Chamados"."IdPacienteLeito" = "PacienteLeito"."Id"
+  INNER JOIN "Pacientes"
+    ON "PacienteLeito"."IdPaciente" = "Pacientes"."Id"
+  LEFT JOIN "Profissionais"
+    ON "Chamados"."IdProfissional" = "Profissionais"."Id"
+  INNER JOIN "Leitos"
+    ON "PacienteLeito"."IdLeito" = "Leitos"."Id"
+  INNER JOIN "Setores"
+    ON "Setores"."Id" = "Leitos"."IdSetor"
+  WHERE 
+    "Chamados"."Status" = 'PENDENTE'
+  `;
+
+  if(id_setor){
+    query += ` AND "Setores"."Id" = ${id_setor}`
+  }
+  query += ' ORDER BY "Chamados"."DataCriacao" DESC';
+
+  const { rows } = await pool.query(query);
+  return rows;
 }
 
 async function acceptChamado({ id_chamado, id_profissional }) {
@@ -261,7 +295,7 @@ async function finishChamado(id_chamado) {
 
     const sqlUpdate = `
       UPDATE "Chamados"
-       SET "Status"     = 'CONCLUÍDO',
+       SET "Status"     = 'CONCLUIDO',
            "DataFim"    = NOW()
      WHERE "Id"         = $1
        AND "Status" = 'EM ATENDIMENTO'
@@ -271,6 +305,7 @@ async function finishChamado(id_chamado) {
     const paramsUpdate = [
       id_chamado
     ];
+
 
     const { rows: finishChamadoRows } = await client.query(sqlUpdate, paramsUpdate);
 
@@ -290,4 +325,5 @@ async function finishChamado(id_chamado) {
     client.release();
   }
 }
-module.exports = { insertChamado, selectUltimoChamado, selectChamado, acceptChamado, finishChamado }
+
+module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado }
