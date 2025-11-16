@@ -326,4 +326,37 @@ async function finishChamado(id_chamado) {
   }
 }
 
-module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado }
+const pool = require("../db");
+
+async function autoCloseChamados(tempoMaximoMinutos) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const sql = `
+      UPDATE "Chamados"
+         SET "Status"  = 'ENCERRADO AUTOMATICAMENTE',
+             "DataFim" = NOW()
+       WHERE "Status" = 'PENDENTE'
+         AND NOW() - "DataCriacao" > ($1 || ' minutes')::interval
+      RETURNING
+        "Id",
+        "IdSetor",
+        "IdPacienteLeito",
+        "Mensagem",
+        "DataCriacao"
+    `;
+
+    const { rows } = await client.query(sql, [tempoMaximoMinutos]);
+
+    await client.query("COMMIT");
+    return rows;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado, autoCloseChamados }
