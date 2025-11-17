@@ -359,4 +359,44 @@ async function autoCloseChamados(tempoMaximoMinutos) {
   }
 }
 
-module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado, autoCloseChamados }
+async function cancelChamado({ id_chamado }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const sql = `
+      UPDATE "Chamados"
+         SET "Status"  = 'CANCELADO',
+             "DataFim" = NOW()
+       WHERE "Id" = $1
+        AND "Status" = 'PENDENTE'
+      RETURNING
+        "Id",
+        "IdPacienteLeito",
+        "Status",
+        "DataCriacao",
+        "DataFim"
+    `;
+
+    const params = [id_chamado];
+
+    const { rows } = await client.query(sql, params);
+
+    await client.query("COMMIT");
+
+    // se não achar nenhuma linha, ou não estava mais pendente, ou não era dele
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rows[0];
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { insertChamado, selectUltimoChamado, selectChamado, selectChamadosPendentes, acceptChamado, finishChamado, autoCloseChamados, cancelChamado }
