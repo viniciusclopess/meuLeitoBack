@@ -326,25 +326,29 @@ async function finishChamado(id_chamado) {
   }
 }
 
-const pool = require("../db");
-
 async function autoCloseChamados(tempoMaximoMinutos) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     const sql = `
-      UPDATE "Chamados"
-         SET "Status"  = 'ENCERRADO AUTOMATICAMENTE',
-             "DataFim" = NOW()
-       WHERE "Status" = 'PENDENTE'
-         AND NOW() - "DataCriacao" > ($1 || ' minutes')::interval
+      UPDATE "Chamados" c
+      SET
+        "Status"  = 'ENCERRADO AUTOMATICAMENTE',
+        "DataFim" = NOW()
+      FROM "PacienteLeito" p
+      JOIN "Leitos" l
+        ON p."IdLeito" = l."Id"
+      WHERE
+        c."Status" = 'PENDENTE'
+        AND c."IdPacienteLeito" = p."Id"
+        AND NOW() - c."DataCriacao" > ($1 || ' minutes')::interval
       RETURNING
-        "Id",
-        "IdSetor",
-        "IdPacienteLeito",
-        "Mensagem",
-        "DataCriacao"
+        c."Id",
+        c."IdPacienteLeito",
+        l."IdSetor",
+        c."Mensagem",
+        c."DataCriacao";
     `;
 
     const { rows } = await client.query(sql, [tempoMaximoMinutos]);

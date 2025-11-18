@@ -4,13 +4,11 @@ const http = require('http');
 const app = require('./app');
 const pool = require('./db/pool');
 const { initSocket } = require("./socket/socket");
-const { startAutoCloseJob } = require("./jobs/autoCloseJob");
 
 const PORT = process.env.PORT || 3500;
 
 // cria o servidor HTTP
 const server = http.createServer(app);
-startAutoCloseJob();
 
 // inicializa o Socket.IO corretamente
 const io = initSocket(server);

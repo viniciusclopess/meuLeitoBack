@@ -4,15 +4,50 @@ const { selectProfissionaisSetoresSocket } = require("../services/socketService"
 const {
   insertChamado,
   autoCloseChamados,
-  finishChamado,
   acceptChamado,
   cancelChamado
 } = require("../services/chamadosService");
 const cron = require("node-cron");
 let jobStarted = false; // Garantir que o cron não seja iniciado 2x
-
-
 let io;
+
+function startAutoCloseJob() {
+  if (jobStarted) return;
+  jobStarted = true;
+
+  cron.schedule("* * * * *", async () => {
+    console.log("⌛ Verificando chamados para encerrar automaticamente...");
+
+    const TEMPO_LIMITE_MIN = 1;
+
+    try {
+      const chamadosEncerrados = await autoCloseChamados(TEMPO_LIMITE_MIN) || [];
+
+      console.log("🔎 Resultado do autoCloseChamados:", chamadosEncerrados);
+
+      if (Array.isArray(chamadosEncerrados) && chamadosEncerrados.length > 0) {
+        console.log(`🚨 ${chamadosEncerrados.length} chamados serão encerrados automaticamente.`);
+
+        chamadosEncerrados.forEach((chamado) => {
+          const roomName = `setor:${chamado.IdSetor}`;
+
+          console.log(`🚨 Encerrando automaticamente chamado ${chamado.Id} no setor ${chamado.IdSetor}`);
+
+          io.to(roomName).emit("chamado_encerrado_auto", {
+            chamadoId: chamado.Id,
+            setorId: chamado.IdSetor,
+            status: "ENCERRADO AUTOMATICAMENTE",
+          });
+        });
+      } else {
+        console.log("⚠️ Nenhum chamado retornado pelo autoCloseChamados.");
+      }
+    } catch (err) {
+      console.error("❌ Erro no job de auto encerramento:", err);
+    }
+  });
+}
+
 
 function initSocket(server) {
   io = new Server(server, {
@@ -21,6 +56,8 @@ function initSocket(server) {
       methods: ["GET", "POST"],
     },
   });
+  startAutoCloseJob();
+
 
   io.on("connection", (socket) => {
     console.log("🔌 conectado:", socket.id);
@@ -171,42 +208,6 @@ function initSocket(server) {
       }
     );
 
-    // Job de verificação de encerramento do chamado
-    function startAutoCloseJob() {
-      if (jobStarted) {
-        return; // evita registrar o mesmo cron mais de uma vez
-      }
-      jobStarted = true;
-
-      // Rodar todo minuto
-      cron.schedule("* * * * *", async () => {
-        console.log("⌛ Verificando chamados para encerrar automaticamente...");
-
-        // Quantos minutos esperar antes de encerrar automaticamente
-        const TEMPO_LIMITE_MIN = 1; // ajusta aqui o tempo
-
-        const chamadosEncerrados = await autoCloseChamados(TEMPO_LIMITE_MIN);
-
-        if (chamadosEncerrados.length > 0) {
-          console.log(`🚨 ${chamadosEncerrados.length} chamados serão encerrados automaticamente.`);
-
-          chamadosEncerrados.forEach((chamado) => {
-            // ⚠️ importante: usa o nome do campo que vem da query
-            // se no autoCloseChamados você retorna "IdSetor", usa assim:
-            const roomName = `setor:${chamado.IdSetor}`;
-
-            console.log(`🚨 Encerrando automaticamente chamado ${chamado.Id}`);
-
-            io.to(roomName).emit("chamado_encerrado_auto", {
-              chamadoId: chamado.Id,
-              setorId: chamado.IdSetor,
-              status: "ENCERRADO AUTOMATICAMENTE",
-            });
-          });
-        }
-      });
-    }
-
     // Socket de cancelamento do chamado
     socket.on(
       "cancelar_chamado",
@@ -259,7 +260,6 @@ function initSocket(server) {
       }
     );
 
-    startAutoCloseJob();
 
     socket.on("disconnect", () => {
       console.log("❌ desconectou:", socket.id);
