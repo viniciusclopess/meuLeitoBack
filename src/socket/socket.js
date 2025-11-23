@@ -3,11 +3,51 @@ const { Server } = require("socket.io");
 const { selectProfissionaisSetoresSocket } = require("../services/socketService");
 const {
   insertChamado,
-  atribuirProfissionalAoChamado,
+  autoCloseChamados,
   acceptChamado,
+  cancelChamado
 } = require("../services/chamadosService");
-
+const cron = require("node-cron");
+let jobStarted = false; // Garantir que o cron não seja iniciado 2x
 let io;
+
+function startAutoCloseJob() {
+  if (jobStarted) return;
+  jobStarted = true;
+
+  cron.schedule("* * * * *", async () => {
+    console.log("⌛ Verificando chamados para encerrar automaticamente...");
+
+    const TEMPO_LIMITE_MIN = 1;
+
+    try {
+      const chamadosEncerrados = await autoCloseChamados(TEMPO_LIMITE_MIN) || [];
+
+      console.log("🔎 Resultado do autoCloseChamados:", chamadosEncerrados);
+
+      if (Array.isArray(chamadosEncerrados) && chamadosEncerrados.length > 0) {
+        console.log(`🚨 ${chamadosEncerrados.length} chamados serão encerrados automaticamente.`);
+
+        chamadosEncerrados.forEach((chamado) => {
+          const roomName = `setor:${chamado.IdSetor}`;
+
+          console.log(`🚨 Encerrando automaticamente chamado ${chamado.Id} no setor ${chamado.IdSetor}`);
+
+          io.to(roomName).emit("chamado_encerrado_auto", {
+            chamadoId: chamado.Id,
+            setorId: chamado.IdSetor,
+            status: "ENCERRADO AUTOMATICAMENTE",
+          });
+        });
+      } else {
+        console.log("⚠️ Nenhum chamado retornado pelo autoCloseChamados.");
+      }
+    } catch (err) {
+      console.error("❌ Erro no job de auto encerramento:", err);
+    }
+  });
+}
+
 
 function initSocket(server) {
   io = new Server(server, {
@@ -16,6 +56,8 @@ function initSocket(server) {
       methods: ["GET", "POST"],
     },
   });
+  startAutoCloseJob();
+
 
   io.on("connection", (socket) => {
     console.log("🔌 conectado:", socket.id);
@@ -165,6 +207,59 @@ function initSocket(server) {
         }
       }
     );
+
+    // Socket de cancelamento do chamado
+    socket.on(
+      "cancelar_chamado",
+      async ({ chamadoId, setorId }) => {
+        if (!chamadoId) {
+          socket.emit("erro_chamado", {
+            msg: "chamadoId é obrigatório para cancelar.",
+          });
+          return;
+        }
+
+        try {
+          const chamado = await cancelChamado({
+            id_chamado: chamadoId
+          });
+
+          if (!chamado) {
+            socket.emit("cancelar_chamado_erro", {
+              chamadoId,
+              msg: "Não foi possível cancelar: chamado não está mais pendente ou não pertence a este paciente.",
+            });
+            return;
+          }
+
+          console.log(`🛑 chamado ${chamadoId} cancelado pelo paciente`);
+
+          // avisa o paciente que deu certo
+          socket.emit("cancelar_chamado_ok", {
+            chamadoId,
+            status: chamado.Status,
+            msg: "Chamado cancelado com sucesso.",
+          });
+
+          // avisa as enfermeiras do setor para remover da tela
+          const roomName = `setor:${setorId || chamado.IdSetor}`;
+
+          io.to(roomName).emit("chamado_cancelado", {
+            chamadoId,
+            setorId: setorId || chamado.IdSetor,
+            status: chamado.Status,
+          });
+
+        } catch (err) {
+          console.error("❌ erro ao cancelar chamado:", err);
+          socket.emit("cancelar_chamado_erro", {
+            chamadoId,
+            msg: "Erro ao cancelar chamado.",
+          });
+        }
+      }
+    );
+
 
     socket.on("disconnect", () => {
       console.log("❌ desconectou:", socket.id);
