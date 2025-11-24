@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.get("/visao-geral", getVisaoGeral);
 router.get("/tempo-medio", getTempoMedio);
-router.get("/tempo-medio-atendimento", getTempoMedio);
+router.get("/tempo-medio-atendimento", getTempoMedioAtendimento);
 
 module.exports = router;
