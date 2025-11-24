@@ -241,4 +241,4 @@ async function kpiTempoMedioAtendimento(filters = {}) {
 
 
 
-module.exports = { kpiTotalChamados, kpiTempoMedioConclusao }
+module.exports = { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento }
