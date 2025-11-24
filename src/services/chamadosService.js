@@ -62,6 +62,7 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
     "Chamados"."Prioridade",
     "Chamados"."Mensagem",
     "Chamados"."DataCriacao",
+    "Chamados"."DataResposta",
     "Chamados"."DataFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
@@ -159,6 +160,7 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
     "Chamados"."Prioridade"         AS "prioridade",
     "Chamados"."Mensagem"           AS "mensagem",
     "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataResposta"       AS "horaResposta",
     "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
@@ -222,6 +224,7 @@ async function selectChamadosPendentes(id_setor) {
     "Chamados"."Prioridade"         AS "prioridade",
     "Chamados"."Mensagem"           AS "mensagem",
     "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataResposta"       AS "horaResposta",
     "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
@@ -257,6 +260,7 @@ async function acceptChamado({ id_chamado, id_profissional }) {
     const sqlUpdate = `
       UPDATE "Chamados"
         SET "IdProfissional" = $2,
+            "DataResposta"   = NOW(),
             "Status"         = 'EM ATENDIMENTO'
       WHERE "Id" = $1
       RETURNING *

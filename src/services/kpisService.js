@@ -165,5 +165,80 @@ async function kpiTempoMedioConclusao(filters = {}) {
   }
 }
 
+async function kpiTempoMedioAtendimento(filters = {}) {
+  try {
+    const { ini, fim } = defaultRange(filters);
+
+    const conditions = [];
+    const params = [ini, fim];
+
+    const id_setor = parseIntsCSV(filters.id_setor);
+
+    const pushArrayParam = (values) => {
+      params.push(values);
+      return params.length; // index
+    };
+
+    // Filtra pelo range de CRIAÇÃO do chamado
+    conditions.push(`c."DataCriacao" BETWEEN $1 AND $2`);
+
+    // Se filtrar pelo setor
+    if (id_setor && id_setor.length) {
+      const idx = pushArrayParam(id_setor);
+      conditions.push(
+        `EXISTS (
+           SELECT 1
+           FROM "PacienteLeito" pl2
+           JOIN "Leitos" l2 ON l2."Id" = pl2."IdLeito"
+           WHERE pl2."Id" = c."IdPacienteLeito"
+             AND l2."IdSetor" = ANY($${idx})
+         )`
+      );
+    }
+
+    const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const sql = `
+      SELECT
+        -- média em minutos (apenas chamados que já têm resposta)
+        ROUND(
+          COALESCE(
+            AVG(
+              EXTRACT(EPOCH FROM (c."DataResposta" - c."DataCriacao"))
+            ) FILTER (WHERE c."DataResposta" IS NOT NULL) / 60.0,
+            0
+          ),
+          2
+        ) AS avg_minutes,
+
+        -- média em segundos (mesmo critério)
+        ROUND(
+          COALESCE(
+            AVG(
+              EXTRACT(EPOCH FROM (c."DataResposta" - c."DataCriacao"))
+            ) FILTER (WHERE c."DataResposta" IS NOT NULL),
+            0
+          ),
+          2
+        ) AS avg_seconds
+
+      FROM "Chamados" c
+      ${whereSql};
+    `;
+
+    const { rows } = await pool.query(sql, params);
+
+    return {
+      avg_minutes: Number(rows[0]?.avg_minutes ?? 0),
+      avg_seconds: Number(rows[0]?.avg_seconds ?? 0),
+    };
+
+  } catch (err) {
+    console.error("Erro em KPI de tempo médio de atendimento:", err);
+    throw err;
+  }
+}
+
+
 
 module.exports = { kpiTotalChamados, kpiTempoMedioConclusao }
