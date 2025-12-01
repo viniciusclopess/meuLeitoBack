@@ -1,4 +1,5 @@
 const { pool } = require('../db/pool');
+const { nowFortaleza } = require('../tools/datetime')
 
 async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
   const client = await pool.connect();
@@ -62,6 +63,7 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
     "Chamados"."Prioridade",
     "Chamados"."Mensagem",
     "Chamados"."DataCriacao",
+    "Chamados"."DataResposta",
     "Chamados"."DataFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
@@ -159,6 +161,7 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
     "Chamados"."Prioridade"         AS "prioridade",
     "Chamados"."Mensagem"           AS "mensagem",
     "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataResposta"       AS "horaResposta",
     "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
@@ -222,6 +225,7 @@ async function selectChamadosPendentes(id_setor) {
     "Chamados"."Prioridade"         AS "prioridade",
     "Chamados"."Mensagem"           AS "mensagem",
     "Chamados"."DataCriacao"        AS "hora",
+    "Chamados"."DataResposta"       AS "horaResposta",
     "Chamados"."DataFim"            AS "horaFim"
   FROM "Chamados"
   INNER JOIN "PacienteLeito" 
@@ -253,10 +257,12 @@ async function acceptChamado({ id_chamado, id_profissional }) {
     await client.query('BEGIN');
 
     if (!id_chamado || !id_profissional) throw new Error('Id é obrigatório.');
+    const now = nowFortaleza()
 
     const sqlUpdate = `
       UPDATE "Chamados"
         SET "IdProfissional" = $2,
+            "DataResposta"   = $3,
             "Status"         = 'EM ATENDIMENTO'
       WHERE "Id" = $1
       RETURNING *
@@ -264,7 +270,8 @@ async function acceptChamado({ id_chamado, id_profissional }) {
 
     const paramsUpdate = [
       id_chamado,
-      id_profissional
+      id_profissional,
+      now
     ];
 
     const { rows: acceptChamadoRows } = await client.query(sqlUpdate, paramsUpdate);
@@ -292,18 +299,20 @@ async function finishChamado(id_chamado) {
     await client.query('BEGIN');
 
     if (!id_chamado) throw new Error('Id é obrigatório.');
+    const now = nowFortaleza() 
 
     const sqlUpdate = `
       UPDATE "Chamados"
        SET "Status"     = 'CONCLUIDO',
-           "DataFim"    = NOW()
+           "DataFim"    = $2
      WHERE "Id"         = $1
        AND "Status" = 'EM ATENDIMENTO'
      RETURNING *
     `;
 
     const paramsUpdate = [
-      id_chamado
+      id_chamado,
+      now
     ];
 
 
@@ -330,19 +339,20 @@ async function autoCloseChamados(tempoMaximoMinutos) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const now = nowFortaleza() 
 
     const sql = `
       UPDATE "Chamados" c
       SET
         "Status"  = 'ENCERRADO AUTOMATICAMENTE',
-        "DataFim" = NOW()
+        "DataFim" = $2
       FROM "PacienteLeito" p
       JOIN "Leitos" l
         ON p."IdLeito" = l."Id"
       WHERE
         c."Status" = 'PENDENTE'
         AND c."IdPacienteLeito" = p."Id"
-        AND NOW() - c."DataCriacao" > ($1 || ' minutes')::interval
+        AND $2 - c."DataCriacao" > ($1 || ' minutes')::interval
       RETURNING
         c."Id",
         c."IdPacienteLeito",
@@ -351,7 +361,10 @@ async function autoCloseChamados(tempoMaximoMinutos) {
         c."DataCriacao";
     `;
 
-    const { rows } = await client.query(sql, [tempoMaximoMinutos]);
+    const { rows } = await client.query(sql, [
+      tempoMaximoMinutos, 
+      now
+    ]);
 
     await client.query("COMMIT");
     return rows;
@@ -366,12 +379,13 @@ async function autoCloseChamados(tempoMaximoMinutos) {
 async function cancelChamado({ id_chamado }) {
   const client = await pool.connect();
   try {
+    const now = nowFortaleza() 
     await client.query("BEGIN");
 
     const sql = `
       UPDATE "Chamados"
          SET "Status"  = 'CANCELADO',
-             "DataFim" = NOW()
+             "DataFim" = $2
        WHERE "Id" = $1
         AND "Status" = 'PENDENTE'
       RETURNING
@@ -382,7 +396,10 @@ async function cancelChamado({ id_chamado }) {
         "DataFim"
     `;
 
-    const params = [id_chamado];
+    const params = [
+      id_chamado,
+      now
+    ];
 
     const { rows } = await client.query(sql, params);
 

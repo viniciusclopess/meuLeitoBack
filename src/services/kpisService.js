@@ -2,31 +2,31 @@ const { pool } = require('../db/pool');
 
 // Transformar um valor (string ou array) em um array de strings limpas.
 function parseCSV(v) {
-    if (!v && v !== 0) return null;
-    if (Array.isArray(v)) return v.map(String).map(s => s.trim()).filter(Boolean);
-    return String(v).split(",").map(s => s.trim()).filter(Boolean);
+  if (!v && v !== 0) return null;
+  if (Array.isArray(v)) return v.map(String).map(s => s.trim()).filter(Boolean);
+  return String(v).split(",").map(s => s.trim()).filter(Boolean);
 }
 
 // Mesmo que parseCSV, mas retorna array de números inteiros.
 function parseIntsCSV(v) {
-    const arr = parseCSV(v);
-    if (!arr) return null;
-    return arr.map(s => Number(s)).filter(n => Number.isFinite(n));
+  const arr = parseCSV(v);
+  if (!arr) return null;
+  return arr.map(s => Number(s)).filter(n => Number.isFinite(n));
 }
 
 // Tenta converter o valor para Date, se der erro, devolve o valor padrão (fb).
 function parseDateOrDefault(v, fb) {
-    if (!v) return fb;
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? fb : d;
+  if (!v) return fb;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? fb : d;
 }
 
 // Gerar um intervalo padrão de 7 dias para trás, caso ini e fim não venham na requisição.
 function defaultRange(q = {}) {
-    const now = new Date();
-    const fim = parseDateOrDefault(q.fim, now); // exclusivo
-    const ini = parseDateOrDefault(q.ini, new Date(fim - 7 * 864e5)); // inclusivo
-    return { ini, fim };
+  const now = new Date();
+  const fim = parseDateOrDefault(q.fim, now); // exclusivo
+  const ini = parseDateOrDefault(q.ini, new Date(fim - 7 * 864e5)); // inclusivo
+  return { ini, fim };
 }
 
 async function kpiTotalChamados(filters = {}) {
@@ -154,7 +154,7 @@ async function kpiTempoMedioConclusao(filters = {}) {
 
     const { rows } = await pool.query(sql, params);
 
-    return {  
+    return {
       avg_minutes: Number(rows[0]?.avg_minutes ?? 0),
       avg_seconds: Number(rows[0]?.avg_seconds ?? 0),
     };
@@ -165,5 +165,149 @@ async function kpiTempoMedioConclusao(filters = {}) {
   }
 }
 
+async function kpiTempoMedioAtendimento(filters = {}) {
+  try {
+    const { ini, fim } = defaultRange(filters);
 
-module.exports = { kpiTotalChamados, kpiTempoMedioConclusao }
+    const conditions = [];
+    const params = [ini, fim];
+
+    const id_setor = parseIntsCSV(filters.id_setor);
+
+    const pushArrayParam = (values) => {
+      params.push(values);
+      return params.length; // index
+    };
+
+    // Filtra pelo range de CRIAÇÃO do chamado
+    conditions.push(`c."DataCriacao" BETWEEN $1 AND $2`);
+
+    // Se filtrar pelo setor
+    if (id_setor && id_setor.length) {
+      const idx = pushArrayParam(id_setor);
+      conditions.push(
+        `EXISTS (
+           SELECT 1
+           FROM "PacienteLeito" pl2
+           JOIN "Leitos" l2 ON l2."Id" = pl2."IdLeito"
+           WHERE pl2."Id" = c."IdPacienteLeito"
+             AND l2."IdSetor" = ANY($${idx})
+         )`
+      );
+    }
+
+    const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const sql = `
+      SELECT
+        -- média em minutos (apenas chamados que já têm resposta)
+        ROUND(
+          COALESCE(
+            AVG(
+              EXTRACT(EPOCH FROM (c."DataResposta" - c."DataCriacao"))
+            ) FILTER (WHERE c."DataResposta" IS NOT NULL) / 60.0,
+            0
+          ),
+          2
+        ) AS avg_minutes,
+
+        -- média em segundos (mesmo critério)
+        ROUND(
+          COALESCE(
+            AVG(
+              EXTRACT(EPOCH FROM (c."DataResposta" - c."DataCriacao"))
+            ) FILTER (WHERE c."DataResposta" IS NOT NULL),
+            0
+          ),
+          2
+        ) AS avg_seconds
+
+      FROM "Chamados" c
+      ${whereSql};
+    `;
+
+    const { rows } = await pool.query(sql, params);
+
+    return {
+      avg_minutes: Number(rows[0]?.avg_minutes ?? 0),
+      avg_seconds: Number(rows[0]?.avg_seconds ?? 0),
+    };
+
+  } catch (err) {
+    console.error("Erro em KPI de tempo médio de atendimento:", err);
+    throw err;
+  }
+}
+
+async function kpiSelectChamados(filtros = {}) {
+  const { nome, tipo, page = 1, pageSize = 10 } = filtros;
+
+  const pageNum = Number(page) > 0 ? Number(page) : 1;
+  const sizeNum = Number(pageSize) > 0 ? Number(pageSize) : 10;
+  const offset = (pageNum - 1) * sizeNum;
+
+  let baseQuery = `
+    FROM "Chamados" c
+    INNER JOIN "Profissionais" p 
+      ON c."IdProfissional" = p."Id"
+    WHERE 1=1
+  `;
+
+  const params = [];
+
+  // Filtro por nome do enfermeiro
+  if (nome) {
+    params.push(`%${nome}%`);
+    baseQuery += ` AND p."Nome" ILIKE $${params.length} `;
+  }
+
+  // Filtro por tipo do chamado
+  if (tipo) {
+    params.push(tipo);
+    baseQuery += ` AND c."Tipo" = $${params.length} `;
+  }
+
+  // Query para total de registros
+  const countQuery = `
+    SELECT COUNT(*) AS total
+    ${baseQuery}
+  `;
+
+  const { rows: countRows } = await pool.query(countQuery, params);
+  const total = Number(countRows[0].total);
+
+  // Query com paginação
+  const dataQuery = `
+    SELECT 
+      c."Id"              AS id,
+      c."IdPacienteLeito" AS id_paciente_leito,
+      p."Nome"            AS nome,
+      p."CPF"             AS cpf,
+      c."Status"          AS status,
+      c."Tipo"            AS tipo,
+      c."DataCriacao"     AS data_criacao,
+      c."DataFim"         AS data_fim,
+      c."DataResposta"    AS data_resposta
+    ${baseQuery}
+    ORDER BY c."DataCriacao" DESC
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
+  `;
+
+  const dataParams = [...params, sizeNum, offset];
+
+  const { rows: data } = await pool.query(dataQuery, dataParams);
+
+  return {
+    total,
+    page: pageNum,
+    pageSize: sizeNum,
+    data
+  };
+}
+
+
+
+
+
+module.exports = { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados }

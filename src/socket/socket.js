@@ -18,7 +18,7 @@ function startAutoCloseJob() {
   cron.schedule("* * * * *", async () => {
     console.log("⌛ Verificando chamados para encerrar automaticamente...");
 
-    const TEMPO_LIMITE_MIN = 1;
+    const TEMPO_LIMITE_MIN = 30;
 
     try {
       const chamadosEncerrados = await autoCloseChamados(TEMPO_LIMITE_MIN) || [];
@@ -57,7 +57,6 @@ function initSocket(server) {
     },
   });
   startAutoCloseJob();
-
 
   io.on("connection", (socket) => {
     console.log("🔌 conectado:", socket.id);
