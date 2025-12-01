@@ -256,11 +256,12 @@ async function acceptChamado({ id_chamado, id_profissional }) {
     await client.query('BEGIN');
 
     if (!id_chamado || !id_profissional) throw new Error('Id é obrigatório.');
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
 
     const sqlUpdate = `
       UPDATE "Chamados"
         SET "IdProfissional" = $2,
-            "DataResposta"   = NOW(),
+            "DataResposta"   = $3,
             "Status"         = 'EM ATENDIMENTO'
       WHERE "Id" = $1
       RETURNING *
@@ -268,7 +269,8 @@ async function acceptChamado({ id_chamado, id_profissional }) {
 
     const paramsUpdate = [
       id_chamado,
-      id_profissional
+      id_profissional,
+      now
     ];
 
     const { rows: acceptChamadoRows } = await client.query(sqlUpdate, paramsUpdate);
@@ -296,18 +298,20 @@ async function finishChamado(id_chamado) {
     await client.query('BEGIN');
 
     if (!id_chamado) throw new Error('Id é obrigatório.');
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
 
     const sqlUpdate = `
       UPDATE "Chamados"
        SET "Status"     = 'CONCLUIDO',
-           "DataFim"    = NOW()
+           "DataFim"    = $2
      WHERE "Id"         = $1
        AND "Status" = 'EM ATENDIMENTO'
      RETURNING *
     `;
 
     const paramsUpdate = [
-      id_chamado
+      id_chamado,
+      now
     ];
 
 
@@ -334,19 +338,20 @@ async function autoCloseChamados(tempoMaximoMinutos) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
 
     const sql = `
       UPDATE "Chamados" c
       SET
         "Status"  = 'ENCERRADO AUTOMATICAMENTE',
-        "DataFim" = NOW()
+        "DataFim" = $2
       FROM "PacienteLeito" p
       JOIN "Leitos" l
         ON p."IdLeito" = l."Id"
       WHERE
         c."Status" = 'PENDENTE'
         AND c."IdPacienteLeito" = p."Id"
-        AND NOW() - c."DataCriacao" > ($1 || ' minutes')::interval
+        AND $2 - c."DataCriacao" > ($1 || ' minutes')::interval
       RETURNING
         c."Id",
         c."IdPacienteLeito",
@@ -355,7 +360,10 @@ async function autoCloseChamados(tempoMaximoMinutos) {
         c."DataCriacao";
     `;
 
-    const { rows } = await client.query(sql, [tempoMaximoMinutos]);
+    const { rows } = await client.query(sql, [
+      tempoMaximoMinutos, 
+      now
+    ]);
 
     await client.query("COMMIT");
     return rows;
@@ -370,12 +378,13 @@ async function autoCloseChamados(tempoMaximoMinutos) {
 async function cancelChamado({ id_chamado }) {
   const client = await pool.connect();
   try {
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
     await client.query("BEGIN");
 
     const sql = `
       UPDATE "Chamados"
          SET "Status"  = 'CANCELADO',
-             "DataFim" = NOW()
+             "DataFim" = $2
        WHERE "Id" = $1
         AND "Status" = 'PENDENTE'
       RETURNING
@@ -386,7 +395,10 @@ async function cancelChamado({ id_chamado }) {
         "DataFim"
     `;
 
-    const params = [id_chamado];
+    const params = [
+      id_chamado,
+      now
+    ];
 
     const { rows } = await client.query(sql, params);
 
