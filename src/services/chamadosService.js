@@ -1,5 +1,5 @@
 const { pool } = require('../db/pool');
-const nowFortaleza = require('../tools/datetime')
+const { nowFortaleza } = require('../tools/datetime')
 
 async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
   const client = await pool.connect();
