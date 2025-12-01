@@ -126,6 +126,26 @@ async function updatePacienteLeito(id, alocacao) {
 
     if (!id) throw new Error('Id é obrigatório.');
 
+    // 1) Busca a alocação atual para descobrir o IdLeito "antigo"
+    const { rows: alocacaoAnteriorRows } = await client.query(
+      `
+      SELECT 
+        "IdLeito",
+        "DataSaida"
+      FROM "PacienteLeito"
+      WHERE "Id" = $1
+      `,
+      [id]
+    );
+
+    if (alocacaoAnteriorRows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const leitoAnteriorId = alocacaoAnteriorRows[0].IdLeito;
+
+    // 2) Atualiza a alocação
     const rUpdateAlocacao = `
       UPDATE "PacienteLeito"
       SET 
@@ -157,6 +177,35 @@ async function updatePacienteLeito(id, alocacao) {
       return null;
     }
 
+    const alocacaoAtualizada = alocacaoRows[0];
+    const leitoAtualId = alocacaoAtualizada.IdLeito; // leito após o update
+
+    // 3) Libera o leito antigo SE ele existir e for diferente do novo
+    if (leitoAnteriorId && leitoAnteriorId !== leitoAtualId) {
+      await client.query(
+        `
+        UPDATE "Leitos"
+        SET "Status" = 'Livre'
+        WHERE "Id" = $1
+        `,
+        [leitoAnteriorId]
+      );
+    }
+
+    // 4) Marca o leito atual (novo) como Ocupado
+    // (na prática é o mesmo que alocacao.id_leito, se você mandou esse campo)
+    if (leitoAtualId) {
+      await client.query(
+        `
+        UPDATE "Leitos"
+        SET "Status" = 'Ocupado'
+        WHERE "Id" = $1
+        `,
+        [leitoAtualId]
+      );
+    }
+
+    // 5) Retorna os dados finais com join para nomes legíveis
     const selectSQL = `
       SELECT 
         "PacienteLeito"."Id"            AS "AlocacaoId",
@@ -260,6 +309,7 @@ async function updateLiberarPacienteLeito(id) {
     client.release();
   }
 }
+
 async function updateTransferirPacienteLeito(alocacaoAtualId, novoLeitoId) {
   const client = await pool.connect();
   try {
