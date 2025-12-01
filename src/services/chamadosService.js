@@ -1,4 +1,5 @@
 const { pool } = require('../db/pool');
+const nowFortaleza = require('../tools/datetime')
 
 async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
   const client = await pool.connect();
@@ -256,7 +257,7 @@ async function acceptChamado({ id_chamado, id_profissional }) {
     await client.query('BEGIN');
 
     if (!id_chamado || !id_profissional) throw new Error('Id é obrigatório.');
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
+    const now = nowFortaleza()
 
     const sqlUpdate = `
       UPDATE "Chamados"
@@ -298,7 +299,7 @@ async function finishChamado(id_chamado) {
     await client.query('BEGIN');
 
     if (!id_chamado) throw new Error('Id é obrigatório.');
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
+    const now = nowFortaleza() 
 
     const sqlUpdate = `
       UPDATE "Chamados"
@@ -338,7 +339,7 @@ async function autoCloseChamados(tempoMaximoMinutos) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
+    const now = nowFortaleza() 
 
     const sql = `
       UPDATE "Chamados" c
@@ -378,7 +379,7 @@ async function autoCloseChamados(tempoMaximoMinutos) {
 async function cancelChamado({ id_chamado }) {
   const client = await pool.connect();
   try {
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); 
+    const now = nowFortaleza() 
     await client.query("BEGIN");
 
     const sql = `
