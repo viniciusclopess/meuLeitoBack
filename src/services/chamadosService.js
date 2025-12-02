@@ -272,7 +272,7 @@ async function selectChamadosPendentes(id_setor) {
   return rows;
 }
 
-async function acceptChamado({ id_chamado, id_profissional }) {
+async function acceptChamado(id_chamado, id_profissional) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -396,18 +396,16 @@ async function autoCloseChamados(tempoMaximoMinutos) {
   }
 }
 
-async function cancelChamado({ id_chamado }) {
+async function cancelChamado( id_chamado ) {
   const client = await pool.connect();
   try {
-    const now = nowFortaleza() 
     await client.query("BEGIN");
 
     const sql = `
       UPDATE "Chamados"
          SET "Status"  = 'CANCELADO',
-             "DataFim" = $2
+             "DataFim" = (NOW() AT TIME ZONE 'America/Fortaleza')
        WHERE "Id" = $1
-        AND "Status" = 'PENDENTE'
       RETURNING
         "Id",
         "IdPacienteLeito",
@@ -417,8 +415,7 @@ async function cancelChamado({ id_chamado }) {
     `;
 
     const params = [
-      id_chamado,
-      now
+      id_chamado
     ];
 
     const { rows } = await client.query(sql, params);
