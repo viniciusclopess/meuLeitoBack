@@ -116,6 +116,7 @@ function initSocket(server) {
         id_paciente_leito,
         setorId,
         prioridade,
+        tipo,
         mensagem,
         nomePaciente,
         nomeLeito,
@@ -128,6 +129,10 @@ function initSocket(server) {
           socket.emit("erro_chamado", { msg: "setorId não informado" });
           return;
         }
+        if (!tipo) {
+          socket.emit("erro_chamado", { msg: "tipo não informado" });
+          return;
+        }
 
         const roomName = `setor:${setorId}`;
 
@@ -135,6 +140,7 @@ function initSocket(server) {
           const chamado = await insertChamado({
             id_paciente_leito,
             prioridade,
+            tipo,
             mensagem,
           });
 
@@ -146,9 +152,9 @@ function initSocket(server) {
             IdSetor: setorId,
             IdPacienteLeito: id_paciente_leito,
             prioridade: prioridade ?? null,
+            tipo: tipo,
             mensagem: mensagem ?? null,
             hora: new Date().toISOString(),
-            // 👇 agora vem o nome do paciente e do leito
             NomePaciente: nomePaciente || null,
             NomeLeito: nomeLeito || null,
           });
