@@ -225,9 +225,7 @@ function initSocket(server) {
         }
 
         try {
-          const chamado = await cancelChamado({
-            id_chamado: chamadoId
-          });
+          const chamado = await cancelChamado(chamadoId);
 
           if (!chamado) {
             socket.emit("cancelar_chamado_erro", {
