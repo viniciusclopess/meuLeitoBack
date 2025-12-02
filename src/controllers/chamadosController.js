@@ -1,4 +1,4 @@
-const { insertChamado, selectChamado, selectUltimoChamado, acceptChamado, finishChamado, selectChamadosPendentes } = require('../services/chamadosService');
+const { insertChamado, selectChamado, selectUltimoChamado, acceptChamado, finishChamado, selectChamadosPendentes, cancelChamado } = require('../services/chamadosService');
 
 async function postChamado(req, res) {
   try {
@@ -144,7 +144,7 @@ async function putAcceptChamado(req, res) {
 async function putFinishChamado(req, res) {
   try {
     const { id_chamado } = req.params;
-    const resultado = await finishChamado(id_chamado, req.body);
+    const resultado = await finishChamado(id_chamado);
 
     if (!resultado) {
       return res.status(404).json({
@@ -169,5 +169,33 @@ async function putFinishChamado(req, res) {
   }
 }
 
+async function putCancelChamado(req, res) {
+  try {
+    const { id_chamado } = req.params;
+    const resultado = await cancelChamado(id_chamado);
 
-module.exports = { postChamado, getChamado, getUltimoChamado, getChamadosPendentes, putAcceptChamado, putFinishChamado };
+    if (!resultado) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Chamado não encontrado.',
+        error: resultado
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Chamado cancelado com sucesso.',
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({
+      ok: false,
+      message: 'Erro ao cancelar chamado.',
+      error: err.message
+    });
+  }
+}
+
+module.exports = { postChamado, getChamado, getUltimoChamado, getChamadosPendentes, putAcceptChamado, putFinishChamado, putCancelChamado };

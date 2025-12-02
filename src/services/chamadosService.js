@@ -1,14 +1,16 @@
 const { pool } = require('../db/pool');
 const { nowFortaleza } = require('../tools/datetime')
 
-async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
+async function insertChamado({ id_paciente_leito, prioridade, mensagem, tipo }) {
   const client = await pool.connect();
 
   if (!id_paciente_leito) {
     throw new Error("Campos obrigatórios! (id_paciente_leito)");
   }
 
-  const tipoDefault = "OUTROS";
+  if(!tipo){
+    tipo = "OUTROS";
+  } 
 
   try {
     await client.query("BEGIN");
@@ -29,7 +31,7 @@ async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
         id_paciente_leito,
         null, // começa sem profissional
         prioridade ?? null,
-        tipoDefault, // 👈 nunca vai null agora
+        tipo,
         mensagem ?? null,
       ]
     );
@@ -45,7 +47,7 @@ async function insertChamado({ id_paciente_leito, prioridade, mensagem }) {
   }
 }
 
-async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status) {
+async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, status, tipo) {
   let query = `
   SELECT 
     "Chamados"."Id",
@@ -82,7 +84,11 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
   let paramIndex = 1;  // Inicializa o índice de parâmetro
 
   if (id_paciente_leito) {
-    query += ` WHERE "Chamados"."IdPacienteLeito" = $${paramIndex}`;
+    if (params.length > 0) {
+      query += ` AND "Chamados"."IdPacienteLeito" = $${paramIndex}`;
+    } else {
+      query += ` WHERE "Chamados"."IdPacienteLeito" = $${paramIndex}`;
+    }
     params.push(id_paciente_leito);
     paramIndex++;
   }
@@ -94,6 +100,16 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
       query += ` WHERE "Chamados"."IdProfissional" = $${paramIndex}`;
     }
     params.push(id_profissional);
+    paramIndex++;
+  }
+  
+  if (tipo) {
+    if (params.length > 0) {
+      query += ` AND "Chamados"."Tipo" = $${paramIndex}`;
+    } else {
+      query += ` WHERE "Chamados"."Tipo" = $${paramIndex}`;
+    }
+    params.push(tipo);
     paramIndex++;
   }
 
@@ -143,7 +159,7 @@ async function selectChamado(id_paciente_leito, id_profissional, id_paciente, id
   return rows;
 }
 
-async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor) {
+async function selectUltimoChamado(id_paciente_leito, id_profissional, id_paciente, id_leito, id_setor, tipo) {
   let query = `
   SELECT 
     "Chamados"."Id"                 AS "chamadoId",
@@ -181,8 +197,13 @@ async function selectUltimoChamado(id_paciente_leito, id_profissional, id_pacien
 
   // Filtros opcionais
   if (id_paciente_leito) {
-    query += ` WHERE "Chamados"."IdPacienteLeito" = $${paramIndex++}`;
+    query += params.length ? ` AND "Chamados"."IdPacienteLeito" = $${paramIndex++}` : ` WHERE "Chamados"."IdPacienteLeito" = $${paramIndex++}`;
     params.push(id_paciente_leito);
+  }
+
+  if (tipo) {
+    query += params.length ? ` AND "Chamados"."Tipo" = $${paramIndex++}` : ` WHERE "Chamados"."Tipo" = $${paramIndex++}`;
+    params.push(tipo);
   }
 
   if (id_profissional) {
@@ -251,7 +272,7 @@ async function selectChamadosPendentes(id_setor) {
   return rows;
 }
 
-async function acceptChamado({ id_chamado, id_profissional }) {
+async function acceptChamado(id_chamado, id_profissional) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -315,7 +336,6 @@ async function finishChamado(id_chamado) {
       now
     ];
 
-
     const { rows: finishChamadoRows } = await client.query(sqlUpdate, paramsUpdate);
 
     if (finishChamadoRows.length === 0) {
@@ -376,18 +396,16 @@ async function autoCloseChamados(tempoMaximoMinutos) {
   }
 }
 
-async function cancelChamado({ id_chamado }) {
+async function cancelChamado( id_chamado ) {
   const client = await pool.connect();
   try {
-    const now = nowFortaleza() 
     await client.query("BEGIN");
 
     const sql = `
       UPDATE "Chamados"
          SET "Status"  = 'CANCELADO',
-             "DataFim" = $2
+             "DataFim" = (NOW() AT TIME ZONE 'America/Fortaleza')
        WHERE "Id" = $1
-        AND "Status" = 'PENDENTE'
       RETURNING
         "Id",
         "IdPacienteLeito",
@@ -397,8 +415,7 @@ async function cancelChamado({ id_chamado }) {
     `;
 
     const params = [
-      id_chamado,
-      now
+      id_chamado
     ];
 
     const { rows } = await client.query(sql, params);
