@@ -1,4 +1,6 @@
 function nowFortaleza() {
+  const now = new Date();
+
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Fortaleza",
     year: "numeric",
@@ -10,11 +12,13 @@ function nowFortaleza() {
     hour12: false,
   });
 
-  const parts = fmt.formatToParts(new Date());
-  const get = (type) => parts.find((p) => p.type === type).value;
+  const formatted = fmt.format(now); 
+  // Normalmente vem "2025-12-02, 21:28:13" ou "2025-12-02 21:28:13" dependendo do ambiente
 
-  // en-CA => ano-mês-dia
-  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
+  const cleaned = formatted.replace(",", ""); // tira vírgula se tiver
+
+  // Garante "YYYY-MM-DD HH:mm:ss"
+  return cleaned.trim();
 }
 
 module.exports = { nowFortaleza };
