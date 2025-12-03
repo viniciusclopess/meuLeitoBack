@@ -50,10 +50,14 @@ function startAutoCloseJob() {
 
 
 function initSocket(server) {
-  io = new Server(server, {
+  const io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: [
+        "http://localhost:5173",
+        "https://app-meuleito.com.br", // mesmo domínio do HostGator
+      ],
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
   startAutoCloseJob();
