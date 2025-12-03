@@ -1,46 +1,32 @@
-// server.js
-require('dotenv').config();
-const http = require('http');
-const app = require('./app');
-const pool = require('./db/pool');
-const { initSocket } = require("./socket/socket");
+// socket/socket.js
+const { Server } = require("socket.io");
 
-const PORT = process.env.PORT || 3500;
-
-// cria o servidor HTTP
-const server = http.createServer(app);
-
-// inicializa o Socket.IO corretamente
-const io = initSocket(server);
-
-// salva o io dentro do app (caso queira usar em controllers)
-app.set('io', io);
-
-// inicia o servidor
-server.listen(PORT, () => {
-  console.log('------------------------------------------');
-  console.log(`🚀 Servidor HTTP rodando em: http://localhost:${PORT}`);
-  console.log(`🌐 WebSocket ativo em: ws://localhost:${PORT}`);
-  console.log('------------------------------------------');
-});
-
-// captura erros de inicialização
-server.on('error', (err) => {
-  console.error('❌ Erro ao iniciar o servidor:');
-  console.error(err.message);
-});
-
-// encerramento limpo (Ctrl + C)
-process.on('SIGINT', async () => {
-  console.log('\nEncerrando servidor e pool...');
-  try {
-    await pool.end();
-    console.log('✅ Pool de conexões fechado.');
-  } catch (err) {
-    console.error('⚠️ Erro ao encerrar pool:', err.message);
-  }
-  server.close(() => {
-    console.log('🛑 Servidor encerrado com sucesso.');
-    process.exit(0);
+function initSocket(server) {
+  const io = new Server(server, {
+    cors: {
+      origin: [               // se usar outra porta no dev
+        "https://meu-leito-front.onrender.com",  // 👉 troca pelo domínio real do front
+      ],
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+    // path: "/socket.io", // deixe padrão se não alterou nada
   });
-});
+
+  io.on("connection", (socket) => {
+    console.log("✅ [socket] cliente conectado:", socket.id);
+
+    socket.on("entrar_setor", ({ setorId }) => {
+      console.log("🧩 [socket] entrar_setor:", setorId);
+      socket.join(`setor_${setorId}`);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("❌ [socket] cliente desconectado:", socket.id, reason);
+    });
+  });
+
+  return io;
+}
+
+module.exports = { initSocket };
