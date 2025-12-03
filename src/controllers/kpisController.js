@@ -1,4 +1,4 @@
-const { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados } = require("../services/kpisService");
+const { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo, kpiVolumeChamadosPorTipo } = require("../services/kpisService");
 
 
 async function getVisaoGeral(req, res) {
@@ -40,6 +40,32 @@ async function getTempoMedioAtendimento(req, res) {
   }
 }
 
+async function getVolumeAtendimentosPorIntervalo(req, res) {
+  try {
+    const resultado = await kpiVolumeAtendimentosPorIntervalo(req.query);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error("Erro em extrair intervalos de chamados:", error);
+    return res.status(500).json({
+      message: "Erro ao buscar KPI's de intervalos.",
+      error: error.message,
+    });
+  }
+}
+
+async function getVolumeChamadosPorTipo(req, res) {
+  try {
+    const resultado = await kpiVolumeChamadosPorTipo(req.query);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error("Erro em extrair intervalos de tipo de chamados:", error);
+    return res.status(500).json({
+      message: "Erro ao buscar KPI's de intervalos de tipos.",
+      error: error.message,
+    });
+  }
+}
+
 async function getChamadosEnfermeiros(req, res) {
   try {
     const filtros = req.query;
@@ -56,4 +82,4 @@ async function getChamadosEnfermeiros(req, res) {
   }
 }
 
-module.exports = { getVisaoGeral, getTempoMedio, getTempoMedioAtendimento, getChamadosEnfermeiros };
+module.exports = { getVisaoGeral, getTempoMedio, getTempoMedioAtendimento, getChamadosEnfermeiros, getVolumeAtendimentosPorIntervalo, getVolumeChamadosPorTipo };
