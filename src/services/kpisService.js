@@ -34,7 +34,7 @@ async function kpiTotalChamados(filters = {}) {
     const { ini, fim } = defaultRange(filters);
 
     // início dos filtros -> sempre usar o range como primeiros params
-    const conditions = ['c."DataCriacao" >= $1', 'c."DataCriacao" < $2'];
+    const conditions = ['c."DataCriacao" >= $1', 'c."DataCriacao" <= $2'];
     const params = [ini, fim];
 
     // parse dos filtros
@@ -306,10 +306,6 @@ async function kpiSelectChamados(filtros = {}) {
   };
 }
 
-// Volume de atendimentos por intervalo de horário (00-06, 06-12, 12-18, 18-00)
-// Filtros:
-//  - filters.ini / filters.fim  -> opcionais (se não vierem, NÃO filtra por data)
-//  - filters.id_setor          -> opcional (se não vier, NÃO filtra por setor)
 async function kpiVolumeAtendimentosPorIntervalo(filters = {}) {
   try {
     const params = [];
@@ -411,4 +407,89 @@ async function kpiVolumeAtendimentosPorIntervalo(filters = {}) {
   }
 }
 
-module.exports = { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo }
+async function kpiVolumeChamadosPorTipo(filters = {}) {
+  try {
+    const params = [];
+    let paramIndex = 1;
+    let hasWhere = false;
+
+    let query = `
+      SELECT
+        c."Tipo" AS tipo,
+        COUNT(*)::int AS total
+      FROM "Chamados" c
+    `;
+
+    // --- Sempre: só chamados "relevantes" (mesma regra da outra KPI) ---
+    query += ` WHERE (c."Status" = 'CONCLUIDO' 
+                  OR c."Status" = 'EM ATENDIMENTO' 
+                  OR c."Status" = 'ENCERRADO AUTOMATICAMENTE')`;
+    hasWhere = true;
+
+    // Se NÃO vier ini/fim -> não filtra por data (pega todo histórico)
+    const hasDateFilter = Boolean(filters.ini || filters.fim);
+
+    if (hasDateFilter) {
+      const { ini, fim } = defaultRange(filters); // mesma função que vc já usa
+
+      if (hasWhere) {
+        query += ` AND c."DataCriacao" BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      } else {
+        query += ` WHERE c."DataCriacao" BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+        hasWhere = true;
+      }
+
+      params.push(ini, fim);
+      paramIndex += 2;
+    }
+
+    // ----------------- Filtro de SETOR (opcional) -----------------
+    // Aceita múltiplos setores via CSV, ex: "1,2,3"
+    const id_setor = parseIntsCSV?.(filters.id_setor) || null;
+
+    if (id_setor && id_setor.length) {
+      if (hasWhere) {
+        query += ` AND EXISTS (
+          SELECT 1
+          FROM "PacienteLeito" pl2
+          JOIN "Leitos" l2 ON l2."Id" = pl2."IdLeito"
+          WHERE pl2."Id" = c."IdPacienteLeito"
+            AND l2."IdSetor" = ANY($${paramIndex})
+        )`;
+      } else {
+        query += ` WHERE EXISTS (
+          SELECT 1
+          FROM "PacienteLeito" pl2
+          JOIN "Leitos" l2 ON l2."Id" = pl2."IdLeito"
+          WHERE pl2."Id" = c."IdPacienteLeito"
+            AND l2."IdSetor" = ANY($${paramIndex})
+        )`;
+        hasWhere = true;
+      }
+
+      params.push(id_setor); // array -> ANY($n)
+      paramIndex++;
+    }
+
+    // Agrupa por tipo de chamado
+    query += `
+      GROUP BY c."Tipo"
+      ORDER BY total DESC, c."Tipo" ASC;
+    `;
+
+    const { rows } = await pool.query(query, params);
+
+    // Normaliza o retorno
+    const result = rows.map((r) => ({
+      tipo: r.tipo,
+      total: Number(r.total),
+    }));
+
+    return result;
+  } catch (err) {
+    console.error("Erro em KPI de volume de chamados por tipo:", err);
+    throw err;
+  }
+}
+
+module.exports = { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo, kpiVolumeChamadosPorTipo }
