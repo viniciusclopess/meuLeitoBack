@@ -177,7 +177,7 @@ function initSocket(server) {
     // --- ENFERMEIRA ACEITA CHAMADO ---
     socket.on(
       "aceitar_chamado",
-      async ({ chamadoId, idProfissional, setorId }) => {
+      async ( { chamadoId, idProfissional, setorId }) => {
         if (!chamadoId || !idProfissional) {
           socket.emit("erro_chamado", {
             msg: "chamadoId e idProfissional são obrigatórios",
@@ -186,10 +186,10 @@ function initSocket(server) {
         }
 
         try {
-          const chamadoAtualizado = await acceptChamado({
-            id_chamado: chamadoId,
-            id_profissional: idProfissional,
-          });
+          const chamadoAtualizado = await acceptChamado(
+            chamadoId,
+            idProfissional,
+          );
 
           console.log(
             `✅ chamado ${chamadoId} aceito pelo profissional ${idProfissional}`
