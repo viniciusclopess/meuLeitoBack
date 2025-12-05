@@ -15,7 +15,7 @@ function startAutoCloseJob() {
   if (jobStarted) return;
   jobStarted = true;
 
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/10 * * * *", async () => {
     console.log("⌛ Verificando chamados para encerrar automaticamente...");
 
     const TEMPO_LIMITE_MIN = 30;
