@@ -1,4 +1,4 @@
-const { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo, kpiVolumeChamadosPorTipo } = require("../services/kpisService");
+const { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo, kpiVolumeChamadosPorTipo, kpiVolumeChamadosPorSetor } = require("../services/kpisService");
 
 
 async function getVisaoGeral(req, res) {
@@ -82,4 +82,20 @@ async function getChamadosEnfermeiros(req, res) {
   }
 }
 
-module.exports = { getVisaoGeral, getTempoMedio, getTempoMedioAtendimento, getChamadosEnfermeiros, getVolumeAtendimentosPorIntervalo, getVolumeChamadosPorTipo };
+async function getVolumeChamadosPorSetor(req, res) {
+  try {
+    const filtros = req.query;
+    const resultado = await kpiVolumeChamadosPorSetor(filtros);
+
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error("Erro ao buscar chamados de setores:", error);
+
+    return res.status(500).json({
+      message: "Erro ao buscar os chamados.",
+      error: error.message,
+    });
+  }
+}
+
+module.exports = { getVisaoGeral, getTempoMedio, getTempoMedioAtendimento, getChamadosEnfermeiros, getVolumeAtendimentosPorIntervalo, getVolumeChamadosPorTipo, getVolumeChamadosPorSetor };

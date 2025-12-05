@@ -492,4 +492,87 @@ async function kpiVolumeChamadosPorTipo(filters = {}) {
   }
 }
 
-module.exports = { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo, kpiVolumeChamadosPorTipo }
+async function kpiVolumeChamadosPorSetor(filters = {}) {
+  try {
+    const params = [];
+    let paramIndex = 1;
+    let hasWhere = false;
+
+    let query = `
+      SELECT
+        l."IdSetor" AS id_setor,
+        s."Nome"    AS nome_setor,
+        COUNT(*)::int AS total
+      FROM "Chamados" c
+      JOIN "PacienteLeito" pl
+        ON pl."Id" = c."IdPacienteLeito"
+      JOIN "Leitos" l
+        ON l."Id" = pl."IdLeito"
+      JOIN "Setores" s
+        ON s."Id" = l."IdSetor"
+    `;
+
+    // --- Sempre: só chamados "relevantes" ---
+    query += ` WHERE (
+        c."Status" = 'CONCLUIDO'
+        OR c."Status" = 'EM ATENDIMENTO'
+        OR c."Status" = 'ENCERRADO AUTOMATICAMENTE'
+      )`;
+    hasWhere = true;
+
+    // Se NÃO vier ini/fim -> não filtra por data (pega todo histórico)
+    const hasDateFilter = Boolean(filters.ini || filters.fim);
+
+    if (hasDateFilter) {
+      const { ini, fim } = defaultRange(filters); // mesma função que vc já usa
+
+      if (hasWhere) {
+        query += ` AND c."DataCriacao" BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      } else {
+        query += ` WHERE c."DataCriacao" BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+        hasWhere = true;
+      }
+
+      params.push(ini, fim);
+      paramIndex += 2;
+    }
+
+    // --------- Filtro de SETOR (opcional) ----------
+    // Aceita múltiplos setores via CSV, ex: "1,2,3"
+    const id_setor = parseIntsCSV?.(filters.id_setor) || null;
+
+    if (id_setor && id_setor.length) {
+      if (hasWhere) {
+        query += ` AND l."IdSetor" = ANY($${paramIndex})`;
+      } else {
+        query += ` WHERE l."IdSetor" = ANY($${paramIndex})`;
+        hasWhere = true;
+      }
+
+      params.push(id_setor); // array -> ANY($n)
+      paramIndex++;
+    }
+
+    // Agrupa por SETOR
+    query += `
+      GROUP BY l."IdSetor", s."Nome"
+      ORDER BY total DESC, s."Nome" ASC;
+    `;
+
+    const { rows } = await pool.query(query, params);
+
+    const result = rows.map((r) => ({
+      id_setor: Number(r.id_setor), 
+      nome_setor: r.nome_setor,
+      total: Number(r.total),
+    }));
+
+    return result;
+  } catch (err) {
+    console.error("Erro em KPI de volume de chamados por setor:", err);
+    throw err;
+  }
+}
+
+
+module.exports = { kpiTotalChamados, kpiTempoMedioConclusao, kpiTempoMedioAtendimento, kpiSelectChamados, kpiVolumeAtendimentosPorIntervalo, kpiVolumeChamadosPorTipo, kpiVolumeChamadosPorSetor }
